@@ -125,7 +125,7 @@ public enum XLSXCodec {
         }
         let sheetRows = root.first("sheetData")?.children.filter { $0.name == "row" } ?? []
         guard let header = sheetRows.first, header.attributes["r"] == "1" else { throw StudyError.corrupt("第一行必须为表头。") }
-        if root.all("mergeCell").contains(where: { ($0.attributes["ref"] ?? "").split(separator: ":").contains { $0.hasSuffix("1") && !$0.hasSuffix("11") } }) { throw StudyError.corrupt("表头不支持合并单元格。") }
+        if root.all("mergeCell").contains(where: { ($0.attributes["ref"] ?? "").split(separator: ":").contains { $0.drop(while: { $0.isLetter }) == "1" } }) { throw StudyError.corrupt("表头不支持合并单元格。") }
         var titles: [String: String] = [:]
         for (column,cell) in try columns(header) {
             let title = normalize(try cellString(cell)); if title.isEmpty { continue }
