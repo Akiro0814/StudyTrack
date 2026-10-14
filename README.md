@@ -2,6 +2,8 @@
 
 iOS 原生版本与自签 IPA 构建：参见 [iOS 使用与构建说明](ios/README.md)。iOS 工程位于 `ios/`，要求 iOS 26+；GitHub Actions 的 `iOS Unsigned IPA` 生成真机 arm64 包供自行签名安装。开发与验证记录见 [实施记录](docs/ios-implementation-progress.md)。
 
+iOS 1.1 原生体验更新：壁纸修复、用户头像、平滑成绩曲线、首次录入引导与界面重构，见 [交付记录与实际截图](docs/ios-experience-delivery.md)。
+
 学迹是一款面向学生场景的 Android 成绩记录与分析应用，主打本地离线、多学期管理、可视化分析和高完成度的 Compose 界面体验。
 
 当前版本已经支持：
