@@ -8,12 +8,27 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ios-ci-${{ github.ref }}
+  group: ios-simulator-matrix-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      devices: ${{ steps.devices.outputs.devices }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: devices
+        run: python3 -c 'import json,os; ids=json.load(open("ios/Toolchain.lock.json"))["deviceTypeIDs"]; assert ids; open(os.environ["GITHUB_OUTPUT"],"a").write("devices="+json.dumps(ids)+"\n")'
   simulator:
+    needs: matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        device_type: ${{ fromJSON(needs.matrix.outputs.devices) }}
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: 30
+    env:
+      STUDYTRACK_DEVICE_TYPE: ${{ matrix.device_type }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,7 +58,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ios-validation-${{ github.sha }}
+          name: ios-validation-${{ github.sha }}-${{ matrix.device_type }}
           path: |
             artifacts/
             core-tests.log

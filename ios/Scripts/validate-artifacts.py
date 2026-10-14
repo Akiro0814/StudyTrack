@@ -3,7 +3,7 @@
 import json, pathlib, plistlib, zipfile
 import jsonschema, openpyxl, yaml
 root=pathlib.Path(__file__).resolve().parents[2]
-for path in [root/'ios/project.yml', *sorted((root/'.github/workflows').glob('ios-*.yml'))]:
+for path in [root/'ios/project.yml', *sorted((root/'.github/workflows').glob('*.yml'))]:
     with path.open() as f: yaml.safe_load(f)
 for path in [root/'ios/Toolchain.lock.json',root/'ios/Package.resolved',root/'ios/StudyTrack/Resources/Localizable.xcstrings']:
     json.loads(path.read_text())

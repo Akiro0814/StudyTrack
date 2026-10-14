@@ -21,4 +21,4 @@ while IFS= read -r device_type; do
   xcrun simctl io "$udid" screenshot "../artifacts/$udid.png"
   cleanup
   trap - EXIT
-done < <(python3 -c 'import json; print("\n".join(json.load(open("../artifacts/Toolchain.candidate.json"))["deviceTypeIDs"]))')
+done < <(python3 -c 'import json,os; ids=json.load(open("../artifacts/Toolchain.candidate.json"))["deviceTypeIDs"]; selected=os.getenv("STUDYTRACK_DEVICE_TYPE"); assert not selected or selected in ids; print(selected if selected else "\n".join(ids))')
