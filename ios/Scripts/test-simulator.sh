@@ -16,7 +16,7 @@ while IFS= read -r device_type; do
   trap cleanup EXIT
   xcrun simctl boot "$udid"
   xcrun simctl bootstatus "$udid" -b
-  xcodebuild test -onlyUsePackageVersionsFromResolvedFile -project StudyTrack.xcodeproj -scheme StudyTrack -destination "platform=iOS Simulator,id=$udid" -resultBundlePath "../artifacts/$udid.xcresult" -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO 2>&1 | tee "../artifacts/$udid-xcodebuild.log"
+  xcodebuild test -onlyUsePackageVersionsFromResolvedFile -project StudyTrack.xcodeproj -scheme StudyTrack -destination "platform=iOS Simulator,id=$udid" -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 -test-timeouts-enabled YES -default-test-execution-time-allowance 90 -maximum-test-execution-time-allowance 180 -resultBundlePath "../artifacts/$udid.xcresult" -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO 2>&1 | tee "../artifacts/$udid-xcodebuild.log"
   xcrun simctl io "$udid" screenshot "../artifacts/$udid.png"
   cleanup
   trap - EXIT
