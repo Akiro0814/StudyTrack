@@ -120,9 +120,9 @@ struct ExamTrendCard: View {
             }
         }
         .chartYAxis {
-            AxisMarks(position: .leading,values: .automatic(desiredCount: 4)) { value in
+            AxisMarks(position: .leading,values: yTicks) { value in
                 AxisGridLine(stroke: StrokeStyle(dash: [3,4])).foregroundStyle(.secondary.opacity(0.15))
-                AxisValueLabel { if let number = value.as(Double.self) { Text(number,format: .number.precision(.fractionLength(0))).font(.caption2) } }
+                AxisValueLabel { if let number = value.as(Double.self) { Text(number,format: .number.precision(.fractionLength(0...2))).font(.caption2) } }
             }
         }
         .chartXSelection(value: $selectedPosition).frame(height: 220).padding(.top,4)
@@ -132,5 +132,11 @@ struct ExamTrendCard: View {
         let count = exams.count
         if count <= 5 { return (1...max(1,count)).map(Double.init) }
         return [1,Double((count+1)/2),Double(count)]
+    }
+    var yTicks: [Double] {
+        if metric == 0 { return (0...4).map { Double(subject.fullScore)/100*Double($0)/4 } }
+        let maximum = max(2,Int(points.map(\.value).max() ?? 2))
+        let step = max(1,Int(ceil(Double(maximum)/4)))
+        return Array(Set([1.0,Double(maximum)] + stride(from: step,through: maximum,by: step).map(Double.init))).sorted()
     }
 }

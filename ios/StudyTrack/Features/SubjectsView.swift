@@ -36,7 +36,7 @@ struct SubjectsView: View {
                     Task { _ = await model.perform { try await model.store?.deleteSubject(id: subject.id,scope: scope) } }; deleting = nil
                 }
             }
-            .task(id: model.home.total.description + model.subjects.map(\.updatedAt).joined()) {
+            .task(id: model.dataRevision) {
                 guard let store = model.store, let scope = model.scope else { return }
                 do {
                     var result: [String: Int] = [:]
