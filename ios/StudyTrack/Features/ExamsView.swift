@@ -9,41 +9,48 @@ struct ExamsView: View {
     @State private var loading = true
     @State private var loadError: String?
     @State private var editing: Exam?
-    @State private var add = false
+    @State private var recording: RecordIntent?
     @State private var deleting: Exam?
     @State private var requestID = UUID()
-    var filterKey: String { "\(model.selectionRevision)|\(search)|\(subjectID)|\(model.home.total)|\(model.home.rows.first?.updatedAt ?? "")" }
+    var filterKey: String { "\(model.dataRevision)|\(search)|\(subjectID)" }
     var body: some View {
         List {
             Section {
-                Picker("科目",selection: $subjectID) { Text("全部科目").tag(""); ForEach(model.subjects) { Text($0.name).tag($0.id) } }
-            }
-            if loading && page.rows.isEmpty { ProgressView("正在读取成绩") }
-            else if let loadError { Section { Text(loadError); Button("重试") { Task { await load(reset: true) } } } }
-            else {
-                Section("\(page.total) 条成绩") { SummaryView(summary: page.summary) }
+                SubjectFilter(selection: $subjectID)
+                HStack { Text("\(page.total)").font(.system(.largeTitle,design: .rounded,weight: .bold)); Text("份努力，已被记录").font(.subheadline).foregroundStyle(.secondary); Spacer() }.padding(.top,8)
+            }.listRowBackground(Color.clear).listRowSeparator(.hidden)
+            if loading && page.rows.isEmpty { ProgressView("正在读取成绩").listRowBackground(Color.clear) }
+            else if let loadError {
+                EmptyStudyView(title: "读取暂未完成",message: loadError,symbol: "arrow.clockwise",actionTitle: "重试") { Task { await load(reset: true) } }.listRowBackground(Color.clear)
+            } else {
+                if !page.rows.isEmpty { Section { VStack(alignment: .leading,spacing: 12) { SummaryView(summary: page.summary) }.studySurface() }.listRowBackground(Color.clear).listRowSeparator(.hidden) }
                 if page.rows.isEmpty {
-                    ContentUnavailableView("没有符合条件的成绩",systemImage: "magnifyingglass",description: Text("尝试其他科目或考试名称。"))
-                    if !search.isEmpty || !subjectID.isEmpty { Button("清除筛选") { search = ""; subjectID = "" } }
+                    let filtered = !search.isEmpty || !subjectID.isEmpty
+                    EmptyStudyView(title: filtered ? "还没找到这条足迹" : "为下一次进步起笔",message: filtered ? "试试其他科目或考试名称。" : "录下成绩、排名与想法，回看自己的成长。",symbol: filtered ? "magnifyingglass" : "pencil.and.list.clipboard",actionTitle: filtered ? "清除筛选" : "添加成绩") {
+                        if filtered { search = ""; subjectID = "" } else { recording = .single }
+                    }.listRowBackground(Color.clear).listRowSeparator(.hidden)
                 }
-                ForEach(page.rows) { exam in
-                    Button { editing = exam } label: { ExamRowView(exam: exam,subjects: model.subjects).foregroundStyle(.primary) }
-                        .swipeActions { Button("删除",role: .destructive) { deleting = exam } }
-                }
-                if page.rows.count < page.total { Button("加载更多") { Task { await load(reset: false) } }.disabled(loading) }
+                Section {
+                    ForEach(page.rows) { exam in
+                        Button { editing = exam } label: { ExamRowView(exam: exam,subjects: model.subjects).foregroundStyle(.primary).padding(.vertical,8) }
+                            .swipeActions { Button("删除",role: .destructive) { deleting = exam }; Button("编辑") { editing = exam }.tint(model.accent) }
+                            .listRowBackground(Color(uiColor: .secondarySystemGroupedBackground).opacity(model.wallpaper == nil ? 1 : 0.85))
+                    }
+                } header: { if !page.rows.isEmpty { Text("按考试日期 · 最近在前").textCase(nil) } }
+                if page.rows.count < page.total { Button { Task { await load(reset: false) } } label: { HStack { Spacer(); if loading { ProgressView() } else { Text("再看 50 条") }; Spacer() } }.disabled(loading).listRowBackground(Color.clear) }
             }
-        }.navigationTitle("成绩").searchable(text: $search,prompt: "搜索考试名称")
-            .toolbar { Button("添加成绩",systemImage: "plus") { add = true } }
-            .task(id: filterKey) {
-                do { try await Task.sleep(for: .milliseconds(200)); try Task.checkCancellation(); await load(reset: true) } catch {}
+        }.listSectionSpacing(18).studyCanvas().navigationTitle("成绩").navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $search,prompt: "搜索考试名称")
+            .toolbar {
+                Menu { Button("添加成绩",systemImage: "plus") { recording = .single }; Button("批量录入",systemImage: "square.stack.3d.up") { recording = .batch } } label: { Image(systemName: "plus") }.accessibilityLabel("添加成绩")
             }
-            .refreshable { await load(reset: true) }
-            .sheet(item: $editing,onDismiss: { Task { await load(reset: true) } }) { ExamEditorView(scope: model.scope!,existing: $0) }
-            .sheet(isPresented: $add,onDismiss: { Task { await load(reset: true) } }) { ExamEditorView(scope: model.scope!,existing: nil) }
-            .confirmationDialog("删除这条成绩？",isPresented: Binding(get: { deleting != nil },set: { if !$0 { deleting = nil } }),titleVisibility: .visible) {
-                Button("删除",role: .destructive) {
+            .task(id: filterKey) { do { try await Task.sleep(for: .milliseconds(180)); try Task.checkCancellation(); await load(reset: true) } catch {} }
+            .refreshable { await load(reset: true) }.recordEntry($recording)
+            .sheet(item: $editing) { exam in if let scope = model.scope { ExamEditorView(scope: scope,existing: exam) } }
+            .confirmationDialog("删除这条成绩？此操作不可撤销。",isPresented: Binding(get: { deleting != nil },set: { if !$0 { deleting = nil } }),titleVisibility: .visible) {
+                Button("删除成绩",role: .destructive) {
                     guard let exam = deleting, let scope = model.scope else { return }
-                    Task { if await model.perform({ try await model.store?.deleteExam(id: exam.id,scope: scope) }) { await load(reset: true) } }; deleting = nil
+                    Task { _ = await model.perform { try await model.store?.deleteExam(id: exam.id,scope: scope) } }; deleting = nil
                 }
             }
     }

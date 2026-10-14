@@ -9,56 +9,44 @@ struct AnalysisView: View {
     @State private var summary = ExamSummary()
     @State private var loading = false
     @State private var failure: String?
-    @State private var rankKey = "class"
-    @State private var selectedDate: Date?
+    @State private var recording: RecordIntent?
+    @State private var editing: Exam?
     var chosenSubjects: [Subject] { model.subjects.filter { subjectID.isEmpty || $0.id == subjectID } }
     var body: some View {
-        List {
-            Picker("科目",selection: $subjectID) { Text("全部科目").tag(""); ForEach(model.subjects) { Text($0.name).tag($0.id) } }
-            if loading { ProgressView("正在计算") }
-            else if let failure { Text(failure); Button("重试") { Task { await load() } } }
-            else {
-                Section("所选成绩概览") { SummaryView(summary: summary) }
-                if exams.isEmpty { ContentUnavailableView("暂无可分析的成绩",systemImage: "chart.xyaxis.line",description: Text("记录成绩后，这里会展示变化。")) }
+        StudyScroll {
+            VStack(alignment: .leading,spacing: 8) {
+                Text("看见每一步变化。").font(.title2.bold())
+                Text("每场考试独立呈现，同一天也不重叠。").font(.subheadline).foregroundStyle(.secondary)
+            }
+            SubjectFilter(selection: $subjectID)
+            if loading { ProgressView("正在整理成绩").frame(maxWidth: .infinity) }
+            else if let failure {
+                EmptyStudyView(title: "暂时无法读取",message: failure,symbol: "arrow.clockwise",actionTitle: "重试") { Task { await load() } }
+            } else if exams.isEmpty {
+                EmptyStudyView(title: "你的曲线，等待起笔",message: "记录考试后，在这里回看分数和排名的变化。",symbol: "chart.xyaxis.line",actionTitle: "记录成绩") { recording = .single }
+            } else {
+                VStack(alignment: .leading,spacing: 14) { SectionHeading(title: "成绩概览",detail: "\(summary.count) 次考试"); SummaryView(summary: summary) }.studySurface()
                 ForEach(chosenSubjects) { subject in
-                    let rows = exams.filter { $0.subjectID == subject.id }.sorted { $0.date == $1.date ? $0.id < $1.id : $0.date < $1.date }
+                    let rows = exams.filter { $0.subjectID == subject.id }
                     if !rows.isEmpty {
-                        Section("\(subject.name) · 分数趋势") {
-                            Chart(sample(rows,ranked: false)) { exam in
-                                LineMark(x: .value("日期",exam.date.date),y: .value("分数",Double(exam.score)/100))
-                                PointMark(x: .value("日期",exam.date.date),y: .value("分数",Double(exam.score)/100))
-                                    .accessibilityLabel("\(exam.date.description)，\(exam.name)，\(Score.text(exam.score)) 分")
-                            }.chartYScale(domain: 0...Double(subject.fullScore)/100).chartXSelection(value: $selectedDate).frame(minHeight: 220)
-                            if let selectedDate, let closest = rows.min(by: { abs($0.date.date.timeIntervalSince(selectedDate)) < abs($1.date.date.timeIntervalSince(selectedDate)) }) {
-                                Text("\(closest.date.description) · \(closest.name) · \(Score.text(closest.score))/\(Score.text(subject.fullScore))").font(.callout)
-                            }
-                            Text("\(rows.count) 次考试，最高 \(Score.text(rows.map(\.score).max()!)) 分，最低 \(Score.text(rows.map(\.score).min()!)) 分。").font(.caption).foregroundStyle(.secondary)
-                        }
-                        Section("\(subject.name) · 排名趋势") {
-                            Picker("排名",selection: $rankKey) { Text("班排").tag("class"); Text("年排").tag("grade"); Text("区排").tag("district") }.pickerStyle(.segmented)
-                            let ranked = rows.filter { rank($0) != nil }
-                            if ranked.isEmpty { Text("暂无此类排名。").foregroundStyle(.secondary) }
-                            else {
-                                Chart(sample(ranked,ranked: true)) { exam in
-                                    LineMark(x: .value("日期",exam.date.date),y: .value("排名",rank(exam)!))
-                                    PointMark(x: .value("日期",exam.date.date),y: .value("排名",rank(exam)!))
-                                        .accessibilityLabel("\(exam.date.description)，\(exam.name)，第 \(rank(exam)!) 名")
-                                }.chartYScale(domain: .automatic(includesZero: false,reversed: true)).frame(minHeight: 200)
-                            }
-                            Text("排名越小越好，位置越高；未填写排名的考试不补零。").font(.caption).foregroundStyle(.secondary)
-                        }
-                        Section("\(subject.name) · 数据明细") {
-                            ForEach(rows.suffix(50).reversed()) { ExamRowView(exam: $0,subjects: model.subjects) }
-                            if rows.count > 50 { Text("这里显示最近 50 条，全部记录可在“成绩”中分页查看。").font(.caption).foregroundStyle(.secondary) }
+                        VStack(alignment: .leading,spacing: 16) {
+                            SectionHeading(title: subject.name,detail: "满分 \(Score.text(subject.fullScore))")
+                            ExamTrendCard(subject: subject,exams: rows)
+                            DisclosureGroup("查看 \(rows.count) 条成绩明细") {
+                                VStack(spacing: 18) {
+                                    ForEach(ExamTimeline.points(rows,metric: .score,maximumPoints: Int.max).suffix(50).reversed()) { point in
+                                        Button { editing = point.exam } label: { ExamRowView(exam: point.exam,subjects: model.subjects).foregroundStyle(.primary) }.buttonStyle(.plain)
+                                    }
+                                }.padding(.top,16)
+                            }.font(.subheadline).studySurface()
                         }
                     }
                 }
             }
-        }.navigationTitle("分析").task(id: "\(subjectID)|\(model.home.total)|\(model.home.rows.first?.updatedAt ?? "")") { await load() }
-    }
-    func rank(_ exam: Exam) -> Int? { rankKey == "class" ? exam.classRank : rankKey == "grade" ? exam.gradeRank : exam.districtRank }
-    func sample(_ rows: [Exam], ranked: Bool) -> [Exam] {
-        TrendSampler.indices(values: rows.map { ranked ? Int64(rank($0) ?? 0) : $0.score }).map { rows[$0] }
+        }.navigationTitle("分析").navigationBarTitleDisplayMode(.inline)
+            .task(id: "\(subjectID)|\(model.dataRevision)") { await load() }
+            .recordEntry($recording)
+            .sheet(item: $editing) { exam in if let scope = model.scope { ExamEditorView(scope: scope,existing: exam) } }
     }
     func load() async {
         guard let store = model.store, let scope = model.scope else { return }; loading = true; failure = nil
@@ -70,5 +58,79 @@ struct AnalysisView: View {
             }
             guard scope == model.scope, !Task.isCancelled else { return }; exams = all; summary = page.summary; loading = false
         } catch { if !Task.isCancelled { failure = model.friendly(error); loading = false } }
+    }
+}
+
+struct ExamTrendCard: View {
+    let subject: Subject
+    let exams: [Exam]
+    @Environment(AppModel.self) private var model
+    @State private var metric = 0
+    @State private var selectedPosition: Double?
+    var selectedMetric: ExamTimeline.Metric { [.score,.classRank,.gradeRank,.districtRank][metric] }
+    var points: [ExamTimeline.Point] { ExamTimeline.points(exams,metric: selectedMetric) }
+    var allPoints: [ExamTimeline.Point] { ExamTimeline.points(exams,metric: selectedMetric,maximumPoints: Int.max) }
+    var highlighted: ExamTimeline.Point? {
+        guard let selectedPosition else { return allPoints.last }
+        return allPoints.min { abs(Double($0.position)-selectedPosition) < abs(Double($1.position)-selectedPosition) }
+    }
+    var body: some View {
+        VStack(alignment: .leading,spacing: 20) {
+            Picker("趋势指标",selection: $metric) { Text("分数").tag(0); Text("班排").tag(1); Text("年排").tag(2); Text("区排").tag(3) }.pickerStyle(.segmented)
+            if let point = highlighted {
+                VStack(alignment: .leading,spacing: 6) {
+                    HStack(alignment: .firstTextBaseline,spacing: 5) {
+                        Text(metric == 0 ? Score.text(point.exam.score) : "\(Int(point.value))").font(.system(.largeTitle,design: .rounded,weight: .bold)).monospacedDigit().foregroundStyle(model.accent)
+                        Text(metric == 0 ? "分" : "名").font(.subheadline).foregroundStyle(.secondary)
+                        Spacer()
+                        Text("第 \(point.position) 次").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Text("\(point.exam.name.isEmpty ? point.exam.type.label : point.exam.name) · \(point.exam.date.description)").font(.subheadline).foregroundStyle(.secondary)
+                }.accessibilityIdentifier("analysis.selection")
+                trendChart
+                Label(metric == 0 ? "横轴按考试先后排列 · 轻按或拖动查看" : "排名越小越好 · 缺失的排名不补零",systemImage: "hand.draw").font(.caption).foregroundStyle(.secondary)
+            } else {
+                ContentUnavailableView("还没有这类排名",systemImage: "list.number",description: Text("编辑成绩时可以补充排名。"))
+            }
+        }.studySurface().onChange(of: metric) { _,_ in selectedPosition = nil }
+    }
+    var trendChart: some View {
+        Chart {
+            ForEach(points) { point in
+                if metric == 0 {
+                    AreaMark(x: .value("考试序号",Double(point.position)),yStart: .value("起点",0),yEnd: .value("分数",point.value))
+                        .foregroundStyle(LinearGradient(colors: [model.accent.opacity(0.20),model.accent.opacity(0.01)],startPoint: .top,endPoint: .bottom))
+                }
+                LineMark(x: .value("考试序号",Double(point.position)),y: .value(metric == 0 ? "分数" : "排名",point.value))
+                    .foregroundStyle(model.accent).lineStyle(StrokeStyle(lineWidth: 2.5,lineCap: .round,lineJoin: .round))
+                PointMark(x: .value("考试序号",Double(point.position)),y: .value("数值",point.value)).symbolSize(exams.count > 40 ? 12 : 42).foregroundStyle(model.accent)
+                    .accessibilityLabel("第 \(point.position) 次，\(point.exam.date.description)，\(point.exam.name)，\(metric == 0 ? Score.text(point.exam.score) + " 分" : String(Int(point.value)) + " 名")")
+            }
+            if let selectedPosition, let point = highlighted {
+                RuleMark(x: .value("选择",Double(point.position))).foregroundStyle(.secondary.opacity(0.4)).lineStyle(StrokeStyle(dash: [4,4]))
+                PointMark(x: .value("选择",Double(point.position)),y: .value("数值",point.value)).symbolSize(80).foregroundStyle(model.accent)
+            }
+        }
+        .chartXScale(domain: 0.65...Double(max(1,exams.count))+0.35)
+        .chartYScale(domain: metric == 0 ? [0,Double(subject.fullScore)/100] : [max(2,points.map(\.value).max() ?? 2),1])
+        .chartXAxis {
+            AxisMarks(values: xTicks) { value in
+                AxisTick()
+                AxisValueLabel { if let index = value.as(Double.self) { Text("第\(Int(index))次").font(.caption2) } }
+            }
+        }
+        .chartYAxis {
+            AxisMarks(position: .leading,values: .automatic(desiredCount: 4)) { value in
+                AxisGridLine(stroke: StrokeStyle(dash: [3,4])).foregroundStyle(.secondary.opacity(0.15))
+                AxisValueLabel { if let number = value.as(Double.self) { Text(number,format: .number.precision(.fractionLength(0))).font(.caption2) } }
+            }
+        }
+        .chartXSelection(value: $selectedPosition).frame(height: 220).padding(.top,4)
+        .accessibilityIdentifier("analysis.chart")
+    }
+    var xTicks: [Double] {
+        let count = exams.count
+        if count <= 5 { return (1...max(1,count)).map(Double.init) }
+        return [1,Double((count+1)/2),Double(count)]
     }
 }

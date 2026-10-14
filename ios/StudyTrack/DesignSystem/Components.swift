@@ -5,9 +5,9 @@ struct SummaryView: View {
     let summary: ExamSummary
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top,spacing: 24) { values }
+            HStack(alignment: .top,spacing: 12) { values }
             VStack(alignment: .leading,spacing: 16) { values }
-        }.padding(.vertical,8)
+        }.padding(.vertical,4)
         Text("平均分、最高分按原始分计算，不同满分的科目仅供参考。")
             .font(.caption).foregroundStyle(.secondary)
     }
@@ -17,7 +17,8 @@ struct SummaryView: View {
         metric("优秀率",summary.excellenceRate.map { "\($0)%" } ?? "—")
     }
     func metric(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading,spacing: 6) { Text(title).font(.caption).foregroundStyle(.secondary); Text(value).font(.title2.bold()).monospacedDigit() }
+        VStack(alignment: .leading,spacing: 8) { Text(title).font(.caption).foregroundStyle(.secondary); Text(value).font(.system(.title2,design: .rounded,weight: .bold)).monospacedDigit().contentTransition(.numericText()) }
+            .frame(maxWidth: .infinity,alignment: .leading)
             .accessibilityElement(children: .combine)
     }
 }
@@ -25,15 +26,17 @@ struct ExamRowView: View {
     let exam: Exam; let subjects: [Subject]
     var body: some View {
         let subject = subjects.first { $0.id == exam.subjectID }
-        HStack(alignment: .firstTextBaseline,spacing: 16) {
+        HStack(alignment: .center,spacing: 14) {
+            Image(systemName: "doc.text").font(.title3).foregroundStyle(.tint)
+                .frame(width: 42,height: 48).background(.tint.opacity(0.08),in: RoundedRectangle(cornerRadius: 13)).accessibilityHidden(true)
             VStack(alignment: .leading,spacing: 6) {
-                Text(subject?.name ?? "科目").font(.headline)
-                Text(exam.name.isEmpty ? exam.type.label : exam.name).font(.subheadline)
+                Text(exam.name.isEmpty ? exam.type.label : exam.name).font(.headline)
+                Text(subject?.name ?? "科目").font(.subheadline).foregroundStyle(.secondary)
                 Text(exam.date.description).font(.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing,spacing: 6) {
-                Text(Score.text(exam.score)).font(.title3.bold()).monospacedDigit()
+                Text(Score.text(exam.score)).font(.system(.title2,design: .rounded,weight: .semibold)).monospacedDigit()
                 Text("/ \(subject.map { Score.text($0.fullScore) } ?? "—") · \(Grade.classify(score: exam.score,full: subject?.fullScore ?? 0).rawValue)")
                     .font(.caption).foregroundStyle(.secondary)
             }

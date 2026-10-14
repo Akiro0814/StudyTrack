@@ -19,11 +19,19 @@ final class AppModel {
     var currentUser: User? { users.first { $0.id == preferences.currentUserID } }
     var currentSemester: Semester? { semesters.first { $0.id == preferences.currentSemesterID } }
     var selectionRevision = 0
+    var dataRevision = 0
     var wallpaper: UIImage?
+    var avatar: UIImage?
+    private var loadedAvatarID: String?
     private var loadedWallpaperID: String?
     private var loadedWallpaperRevision = -1
     var accent: Color {
-        switch preferences.accent { case "green": .green; case "orange": .orange; case "purple": .purple; default: .blue }
+        switch preferences.accent {
+        case "green": Color(red: 0.10,green: 0.56,blue: 0.44)
+        case "orange": Color(red: 0.88,green: 0.32,blue: 0.24)
+        case "purple": Color(red: 0.61,green: 0.36,blue: 0.82)
+        default: Color(red: 0.29,green: 0.40,blue: 0.91)
+        }
     }
     func start() async {
         guard !ready else { return }
@@ -54,10 +62,18 @@ final class AppModel {
         }
         guard revision == selectionRevision else { return }
         preferences = p; users = u; semesters = terms; subjects = subs; home = page
-        if p.wallpaperAssetID != loadedWallpaperID || loadedWallpaperRevision != selectionRevision {
-            if let id = p.wallpaperAssetID, let snapshot = try? await store.snapshot(), let asset = snapshot.assets.first(where: { $0.id == id }), let data = try? await files?.wallpaper(asset) {
-                wallpaper = UIImage(data: data)
-            } else { wallpaper = nil }
+        dataRevision = try await store.revision()
+        let avatarID = p.currentUserID.flatMap { p.avatarAssetID(for: $0) }
+        if p.wallpaperAssetID != loadedWallpaperID || avatarID != loadedAvatarID || loadedWallpaperRevision != selectionRevision {
+            let assets = try await store.snapshot().assets
+            func image(_ id: String?) async -> UIImage? {
+                guard let id, let asset = assets.first(where: { $0.id == id }), let files,
+                      let data = try? await files.wallpaper(asset) else { return nil }
+                return UIImage(data: data)
+            }
+            wallpaper = await image(p.wallpaperAssetID)
+            avatar = await image(avatarID)
+            loadedAvatarID = avatarID
             loadedWallpaperID = p.wallpaperAssetID
             loadedWallpaperRevision = selectionRevision
         }

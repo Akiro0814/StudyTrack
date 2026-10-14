@@ -15,7 +15,7 @@ final class ExperienceTests: XCTestCase {
         let points = ExamTimeline.points(rows,metric: .score)
         XCTAssertEqual(points.map(\.position),[1,2,3])
         XCTAssertEqual(Set(points.map(\.id)).count,3)
-        XCTAssertEqual(points.map(\.id),ExamTimeline.points(rows.reversed(),metric: .score).map(\.id))
+        XCTAssertEqual(points.map(\.id),ExamTimeline.points(Array(rows.reversed()),metric: .score).map(\.id))
         let ranks = ExamTimeline.points(rows,metric: .classRank)
         XCTAssertEqual(ranks.count,2)
         XCTAssertTrue(ranks.allSatisfy { $0.value > 0 })

@@ -53,8 +53,14 @@ actor FileService {
         } else { try data.write(to: file,options: .atomic) }
     }
     func saveWallpaper(_ data: Data) throws -> Asset {
+        try saveImage(data,maximumSize: 2560)
+    }
+    func saveAvatar(_ data: Data) throws -> Asset {
+        try saveImage(data,maximumSize: 512)
+    }
+    private func saveImage(_ data: Data, maximumSize: Int) throws -> Asset {
         guard data.count <= 50*1024*1024, let source = CGImageSourceCreateWithData(data as CFData,nil),
-              let image = CGImageSourceCreateThumbnailAtIndex(source,0,[kCGImageSourceCreateThumbnailFromImageAlways: true,kCGImageSourceCreateThumbnailWithTransform: true,kCGImageSourceThumbnailMaxPixelSize: 2560] as CFDictionary) else { throw StudyError.invalid("照片无法读取或超过 50MB。") }
+              let image = CGImageSourceCreateThumbnailAtIndex(source,0,[kCGImageSourceCreateThumbnailFromImageAlways: true,kCGImageSourceCreateThumbnailWithTransform: true,kCGImageSourceThumbnailMaxPixelSize: maximumSize] as CFDictionary) else { throw StudyError.invalid("照片无法读取或超过 50MB。") }
         let output = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(output,UTType.jpeg.identifier as CFString,1,nil) else { throw StudyError.corrupt("无法保存壁纸。") }
         CGImageDestinationAddImage(destination,image,[kCGImageDestinationLossyCompressionQuality: 0.85] as CFDictionary)

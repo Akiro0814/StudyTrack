@@ -68,7 +68,7 @@ struct DataTransferView: View {
                     Button("导出完整 JSON 报告") { Task { _ = await model.perform { if let url = try await model.files?.export(JSONEncoder().encode(report),name: "导入报告.json") { share = ShareFile(url: url) } } } }
                 }
             }
-        }.navigationTitle("数据管理")
+        }.studyCanvas().navigationTitle("数据与备份").navigationBarTitleDisplayMode(.inline)
             .fileImporter(isPresented: $choosing,allowedContentTypes: restoring ? [.studytrackBackup,.zip,.data] : [UTType(filenameExtension: "xlsx") ?? .data],allowsMultipleSelection: false) { result in
                 switch result {
                 case .success(let urls): if let file = urls.first { Task { await inspect(file) } }

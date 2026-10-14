@@ -4,17 +4,39 @@ import StudyTrackCore
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     var body: some View {
-        List {
-            Section("学习档案") {
-                NavigationLink { ProfilesView() } label: { Label("用户管理",systemImage: "person.crop.circle") }
-                NavigationLink { SemestersView() } label: { Label("学期管理",systemImage: "calendar") }
-                LabeledContent("当前用户",value: model.currentUser?.name ?? "—")
-                LabeledContent("当前学期",value: model.currentSemester?.name ?? "—")
-            }
-            Section("数据") { NavigationLink { DataTransferView() } label: { Label("导入、导出与完整备份",systemImage: "externaldrive") } }
-            Section("外观") { NavigationLink { PersonalizationView() } label: { Label("个性化",systemImage: "paintpalette") } }
-            Section { NavigationLink("关于与支持") { AboutView() } }
-        }.navigationTitle("设置")
+        StudyScroll {
+            VStack(spacing: 12) {
+                BrandMark(size: 80)
+                Text("学迹").font(.system(.largeTitle,design: .rounded,weight: .bold))
+                Text("StudyTrack").font(.subheadline.weight(.medium)).tracking(2).foregroundStyle(.secondary)
+                Text("留住努力的轨迹。").font(.caption).foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity).padding(.vertical,20).accessibilityIdentifier("settings.brand")
+            NavigationLink { ProfileAppearanceView() } label: {
+                HStack(spacing: 16) {
+                    AvatarView(size: 56)
+                    VStack(alignment: .leading,spacing: 6) { Text(model.currentUser?.name ?? "学习档案").font(.title3.bold()).foregroundStyle(.primary); Text("编辑头像与称呼").font(.caption).foregroundStyle(.secondary) }
+                    Spacer(); Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
+                }.studySurface()
+            }.buttonStyle(.plain)
+            VStack(alignment: .leading,spacing: 4) {
+                SectionHeading(title: "我的学习空间").padding(.bottom,10)
+                NavigationLink { PersonalizationView() } label: { SettingsRow(title: "个性化",subtitle: "壁纸、颜色与内容质感",symbol: "paintpalette.fill",color: .purple) }.accessibilityIdentifier("settings.appearance")
+                Divider().padding(.leading,56)
+                NavigationLink { ProfilesView() } label: { SettingsRow(title: "用户档案",subtitle: "切换、创建和管理学习者",symbol: "person.2.fill",color: .orange) }
+                Divider().padding(.leading,56)
+                NavigationLink { SemestersView() } label: { SettingsRow(title: "学期",subtitle: model.currentSemester?.name ?? "管理学习阶段",symbol: "calendar",color: .green) }
+            }.buttonStyle(.plain).studySurface()
+            VStack(alignment: .leading,spacing: 4) {
+                SectionHeading(title: "安心记录").padding(.bottom,10)
+                NavigationLink { DataTransferView() } label: { SettingsRow(title: "数据与备份",subtitle: "Excel 交换、完整备份与恢复",symbol: "externaldrive.fill",color: model.accent) }
+                Divider().padding(.leading,56)
+                NavigationLink { AboutView() } label: { SettingsRow(title: "关于学迹",subtitle: "隐私、支持与开源许可",symbol: "info.circle.fill",color: .secondary) }
+            }.buttonStyle(.plain).studySurface()
+            VStack(spacing: 8) {
+                Label("只属于你的本地学习空间",systemImage: "lock.shield").font(.caption)
+                Text(AppVersion.text).font(.caption2)
+            }.foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical,8)
+        }.navigationTitle("设置").navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -52,7 +74,7 @@ struct ProfilesView: View {
                     Button("重命名") { name = user.name; renaming = user }.tint(.blue)
                 }
             }
-        }.navigationTitle("用户管理")
+        }.studyCanvas().navigationTitle("用户管理").navigationBarTitleDisplayMode(.inline)
             .toolbar { Button("添加用户",systemImage: "plus") { name = ""; semester = ""; adding = true } }
             .alert("添加用户",isPresented: $adding) {
                 TextField("姓名",text: $name); TextField("初始学期",text: $semester)
@@ -84,7 +106,7 @@ struct SemestersView: View {
                 Button("删除",role: .destructive) { deleting = term }
                 Button("重命名") { editing = term; name = term.name; editor = true }.tint(.blue)
             }
-        }.navigationTitle("学期管理")
+        }.studyCanvas().navigationTitle("学期管理").navigationBarTitleDisplayMode(.inline)
             .toolbar { Button("添加学期",systemImage: "plus") { editing = nil; name = ""; editor = true } }
             .alert(editing == nil ? "添加学期" : "重命名学期",isPresented: $editor) {
                 TextField("学期名称",text: $name)
@@ -104,7 +126,7 @@ struct SemestersView: View {
 struct AboutView: View {
     var body: some View {
         List {
-            Section { Label("学迹 StudyTrack",systemImage: "chart.xyaxis.line").font(.title2.bold()); Text("iOS 1.0 · 离线成绩记录与分析") }
+            Section { HStack(spacing: 16) { BrandMark(size: 64); VStack(alignment: .leading,spacing: 6) { Text("学迹 StudyTrack").font(.title2.bold()); Text(AppVersion.text).font(.caption).foregroundStyle(.secondary) } }.padding(.vertical,12); Text("离线成绩记录与分析 · 让每次努力都有迹可循") }
             Section("隐私") { Text("成绩、用户档案、备注与壁纸保存在本机。应用不接入广告、网络账号或分析服务。导出文件包含个人信息，完整备份默认未加密，请自行保管。") }
             Section("支持") { Text("如需反馈问题，请附上应用版本和重现步骤，避免公开真实姓名与成绩。"); Link("项目主页",destination: URL(string: "https://github.com/L1angK1NG/StudyTrack")!) }
             Section("开源组件") {
@@ -118,11 +140,19 @@ struct AboutView: View {
                     }
                 }
             }
-        }.navigationTitle("关于与支持")
+        }.studyCanvas().navigationTitle("关于与支持").navigationBarTitleDisplayMode(.inline)
     }
     func license(_ name: String) -> String {
         guard let url = Bundle.main.url(forResource: name,withExtension: "txt",subdirectory: "Licenses") ?? Bundle.main.url(forResource: name,withExtension: "txt"),
               let text = try? String(contentsOf: url,encoding: .utf8) else { return "许可文件未能读取，请查阅项目源码中的 Resources/Licenses。" }
         return text
+    }
+}
+
+enum AppVersion {
+    static var text: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.0"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
+        return "版本 \(version) (\(build)) · iOS"
     }
 }

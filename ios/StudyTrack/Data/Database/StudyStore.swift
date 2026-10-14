@@ -51,6 +51,10 @@ public actor StudyStore: ExamRepository {
         try queue.write { db in
             var p = preferences; try Self.repairSelection(db, preferences: &p)
             if let asset = p.wallpaperAssetID, try Int.fetchOne(db, sql: "SELECT count(*) FROM assets WHERE id=?", arguments: [asset]) != 1 { throw StudyError.notFound }
+            for (user, asset) in p.profileAvatars {
+                guard try Int.fetchOne(db,sql: "SELECT count(*) FROM users WHERE id=?",arguments: [user]) == 1,
+                      try Int.fetchOne(db,sql: "SELECT count(*) FROM assets WHERE id=?",arguments: [asset]) == 1 else { throw StudyError.notFound }
+            }
             try Self.writePreferences(db,p); try Self.bump(db)
         }
     }
@@ -99,6 +103,7 @@ public actor StudyStore: ExamRepository {
             try db.execute(sql: "DELETE FROM users WHERE id=?", arguments: [id])
             guard db.changesCount == 1 else { throw StudyError.notFound }
             var p = try Self.preferences(db); try Self.repairSelection(db,preferences: &p)
+            p.setAvatarAssetID(nil,for: id)
             try Self.writePreferences(db,p); try db.execute(sql: "DELETE FROM drafts"); try Self.bump(db)
         }
     }
@@ -228,6 +233,9 @@ public actor StudyStore: ExamRepository {
             guard validTimestamp(date) else { throw StudyError.corrupt("创建/修改时间必须是 RFC3339。") }
         }
         if let id = s.preferences.wallpaperAssetID, !s.assets.contains(where: { $0.id == id }) { throw StudyError.corrupt("壁纸引用不存在。") }
+        for (user, asset) in s.preferences.profileAvatars {
+            guard s.users.contains(where: { $0.id == user }), s.assets.contains(where: { $0.id == asset }) else { throw StudyError.corrupt("头像的用户或资源引用不存在。") }
+        }
         for item in s.legacyIDMap {
             let target: Set<String>
             switch item.entityType { case "user": target = Set(s.users.map(\.id)); case "semester": target = Set(s.semesters.map(\.id)); case "subject": target = Set(s.subjects.map(\.id)); case "exam": target = Set(s.exams.map(\.id)); default: throw StudyError.corrupt("未知旧 ID 类型。") }
