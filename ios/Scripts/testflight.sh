@@ -5,6 +5,8 @@ cd "$(dirname "$0")/../.."
 : "${SIGNING_P12_BASE64:?}" "${SIGNING_P12_PASSWORD:?}" "${PROFILE_BASE64:?}" "${ASC_KEY_BASE64:?}" "${ASC_KEY_ID:?}" "${ASC_ISSUER_ID:?}"
 [[ "$BUILD_NUMBER" =~ ^[0-9]+$ ]] || exit 1
 mkdir -p artifacts
+locked_developer="$(python3 -c 'import json; print(json.load(open("ios/Toolchain.lock.json"))["developerDirectory"] or "")')"
+if [ -n "$locked_developer" ]; then export DEVELOPER_DIR="$locked_developer"; fi
 private_dir="$(mktemp -d)"
 keychain="$private_dir/signing.keychain-db"
 key_password="$(openssl rand -hex 32)"

@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 python3 ios/Scripts/probe-environment.py
+export DEVELOPER_DIR="$(python3 -c 'import json; print(json.load(open("artifacts/Toolchain.candidate.json"))["developerDirectory"])')"
 cd ios
 xcodegen generate --spec project.yml
 mkdir -p StudyTrack.xcodeproj/project.xcworkspace/xcshareddata/swiftpm

@@ -1,9 +1,16 @@
 {
-  "status": "awaiting-macos-verification",
-  "xcodeVersion": null,
-  "developerDirectory": null,
-  "runtimeID": null,
-  "deviceTypeIDs": [],
+  "status": "device-build-and-initial-simulator-verified",
+  "xcodeVersion": "Xcode 26.6\nBuild version 17F113",
+  "developerDirectory": "/Applications/Xcode_26.6.app/Contents/Developer",
+  "runtimeID": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+  "deviceTypeIDs": [
+    "com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation",
+    "com.apple.CoreSimulator.SimDeviceType.iPhone-17",
+    "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max"
+  ],
+  "verifiedDeviceTypeIDs": ["com.apple.CoreSimulator.SimDeviceType.iPhone-17"],
+  "minimumOSDeviceValidation": "pending",
+  "deviceBuildRun": "https://github.com/L1angK1NG/StudyTrack/actions/runs/38531241685",
   "minimumIOS": "26.0",
   "swiftLanguageMode": "6.0",
   "xcodegen": {

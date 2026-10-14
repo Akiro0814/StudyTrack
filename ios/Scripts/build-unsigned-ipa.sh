@@ -2,6 +2,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 mkdir -p artifacts
+locked_developer="$(python3 -c 'import json; print(json.load(open("ios/Toolchain.lock.json"))["developerDirectory"] or "")')"
+if [ -n "$locked_developer" ]; then export DEVELOPER_DIR="$locked_developer"; fi
+python3 - <<'PY'
+import json, subprocess
+lock=json.load(open('ios/Toolchain.lock.json'))
+if lock['xcodeVersion'] and subprocess.check_output(['xcodebuild','-version'],text=True).strip()!=lock['xcodeVersion']:
+    raise SystemExit('Xcode differs from Toolchain.lock.json')
+PY
 xcodebuild -version | tee artifacts/ipa-xcode-version.log
 xcrun swift --version > artifacts/ipa-swift-version.log
 (cd ios && xcodegen generate --spec project.yml)

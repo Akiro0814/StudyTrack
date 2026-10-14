@@ -19,10 +19,16 @@ runtime = next((x for x in runtimes if x['identifier'] == lock['runtimeID']), No
 if not runtime:
     raise SystemExit('Locked runtime is unavailable.')
 available = [x['deviceTypeIdentifier'] for x in sim['devices'].get(runtime['identifier'],[]) if x.get('isAvailable') and x.get('name','').startswith('iPhone')]
+supported = {x['identifier'] for x in runtime.get('supportedDeviceTypes',[]) if x.get('productFamily') == 'iPhone'} or set(available)
 if lock['deviceTypeIDs']:
     devices = lock['deviceTypeIDs']
+    if not set(devices).issubset(supported):
+        raise SystemExit('A locked device type is unsupported by the selected runtime.')
 else:
-    devices = sorted(set(available))
+    preferred = ['com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation',
+                 'com.apple.CoreSimulator.SimDeviceType.iPhone-17',
+                 'com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max']
+    devices = preferred if set(preferred).issubset(supported) else sorted(set(available))
     if not devices:
         raise SystemExit('No compatible iPhone device type discovered for runtime.')
     devices = list(dict.fromkeys([devices[0],devices[len(devices)//2],devices[-1]]))

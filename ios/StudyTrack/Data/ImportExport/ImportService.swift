@@ -25,16 +25,11 @@ extension StudyStore {
                 let semesterName = row.semester.isEmpty ? defaultName : normalize(row.semester)
                 guard semesterName.count <= 100, row.subject.count <= 100 else { issues.append(.init(row: row.row,reason: "学期或科目名称过长。")); continue }
                 row.semester = semesterName
-                let semesterID: String
-                if let existing = semesters[semesterName] { semesterID = existing }
-                else { semesterID = "planned-\(semesters.count)"; semesters[semesterName] = semesterID; newSemesters.insert(semesterName) }
+                let createsSemester = semesters[semesterName] == nil
+                let semesterID = semesters[semesterName] ?? Self.id()
                 let subjectKey = semesterID + "\u{0}" + normalize(row.subject)
-                let subject: (String,Int64)
-                if let existing = subjects[subjectKey] { subject = existing }
-                else {
-                    subject = ("planned-\(subjects.count)",row.fullScore ?? 10000); subjects[subjectKey] = subject
-                    newSubjects.insert("\(semesterName) / \(row.subject)")
-                }
+                let createsSubject = subjects[subjectKey] == nil
+                let subject = subjects[subjectKey] ?? (Self.id(),row.fullScore ?? 10000)
                 guard row.fullScore == nil || row.fullScore == subject.1 else { issues.append(.init(row: row.row,reason: "科目满分冲突，请修改源文件或现有科目。")); continue }
                 row.fullScore = subject.1
                 guard row.score <= subject.1 else { issues.append(.init(row: row.row,reason: "分数超过科目满分。")); continue }
@@ -51,6 +46,10 @@ extension StudyStore {
                     else { duplicates += 1; issues.append(.init(row: row.row,reason: "重复成绩，跳过。",warning: true)) }
                     continue
                 }
+                // Only accepted rows may influence later planning or creation counts.
+                semesters[semesterName] = semesterID; subjects[subjectKey] = subject
+                if createsSemester { newSemesters.insert(semesterName) }
+                if createsSubject { newSubjects.insert("\(semesterName) / \(row.subject)") }
                 seen[key] = row; rows.append(row)
             }
             return ImportPlan(id: UUID(),scope: scope,revision: revision,fileDigest: fileDigest,rows: rows,issues: issues,duplicates: duplicates,conflicts: conflicts,newSemesters: newSemesters.sorted(),newSubjects: newSubjects.sorted())

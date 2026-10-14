@@ -48,8 +48,9 @@ Excel 引擎候选的实施取舍：使用 ZIPFoundation + Foundation XMLParser 
 3. 10000 行的预览、导入、重新打开、完整备份与校验约 18 秒，为本次宿主机合成数据测量，不代表 iPhone 性能或内存验收。
 4. 独立 openpyxl 读写和 Apache POI **5.2.3** 互操作通过；POI 生成共享字符串工作簿由 Swift 读取，iOS 导出由 POI 读取。验证的是交换引擎，不冒充 Android 应用界面往返验收。
 5. Python 独立检查 workflow YAML、配置 JSON、Privacy plist、backup-v1 schema 和黄金/导出备份通过。Bash 语法检查、SwiftUI 源码语法解析通过。
-6. 实际 Android `BackupValues.kt` 使用 Kotlin/JVM 编译运行，精度、原时区和 NFC 规则检查通过。完整 Android 构建尚未通过：本机原始 wrapper 缺少 PathTraversalChecker，既有 org.gradle.java.home 与 SDK 路径也不存在；没有将这些已有环境问题记成成功。
-7. GitHub macOS 26 / Xcode **26.6 (17F113)** 真机 Release 构建成功，首次 IPA 来自 commit `53856b33d969e9c59952c63de8d53592489d6abe`、[run 38529479483](https://github.com/L1angK1NG/StudyTrack/actions/runs/38529479483)。已下载检查 `Payload/StudyTrack.app`、`iphoneos`、arm64、最低 26.0、SHA-256。首次包发现 XcodeGen target 默认设备族覆盖全局 iPhone 设置，已在最终配置中显式修正为 iPhone。
+6. 实际 Android `BackupValues.kt` 使用 Kotlin/JVM 编译运行，精度、原时区和 NFC 规则检查通过。随后修复原有 Wrapper（官方 SHA-256 校验通过）、写死 JDK 路径、依赖源优先级与 SDK 包名，Android 全项目 `compileDebugKotlin` 和 `testDebugUnitTest` 已通过：[run 38531794433](https://github.com/L1angK1NG/StudyTrack/actions/runs/38531794433)。编译仍有原项目 AGP 8.13.2 / SDK 37.0 支持范围警告，不将编译通过扩大为 Android 真机迁移验收。
+7. GitHub macOS 26 / Xcode **26.6 (17F113)** 真机 Release 连续三次构建成功。最终交付来自 commit `9720839ce924f6bacb0adfec90d143ad5138354e`、[run 38531241685](https://github.com/L1angK1NG/StudyTrack/actions/runs/38531241685)：`StudyTrack-unsigned.ipa`，3,538,685 字节，build 3，Bundle ID `com.repea.studytrack.ios`，最低 iOS 26.0，设备族 `[1]`，arm64。已核对 ZIP 结构、Info.plist 和 Mach-O 文件头，SHA-256 为 `20fca1602382060a2d40215e9cde5150c6033c20f2f73930879ebaf546cea97d`。源码后续 Android/文档改动不改变该 IPA 的应用代码。
+8. 首轮 iPhone 17 / iOS 26.5 模拟器的 18 项业务单测和 1 项 UI 测试通过，日志含 `TEST SUCCEEDED`，引导/创建科目流程实际运行。首轮整体工作流在首设备完成后取消并保留 xcresult，不能据此宣称三设备矩阵通过。新版矩阵增加串行与测试超时，继续验证最终的 19 项业务测试。
 
 本机证据位于未提交的 `artifacts/`，包含测试日志、独立互操作日志和实际 IPA。源码与夹具在开发分支提交，构建产物由 Actions artifacts 提供。
 
@@ -57,6 +58,6 @@ Excel 引擎候选的实施取舍：使用 ZIPFoundation + Foundation XMLParser 
 
 - 模拟器 App/Unit/UI 测试矩阵结果与最终 commit 的 IPA 持续跟进，以实际运行结果更新本节。
 - iOS 26.0 最低系统、用户自行重签后的安装、原生玻璃观感、文件/iCloud 选择、返回手势、最大动态字体、VoiceOver、后台终止恢复及真机性能尚未验收。
-- Android 完整应用构建与实际 Android→iOS 全量资源迁移还需 Android SDK / CI 和设备验证；不能用 JVM 规则与 POI 引擎测试替代。
+- Android 完整应用编译已通过；实际 Android→iOS 全量资源迁移仍需两台设备验证，不能用编译、JVM 规则与 POI 引擎测试替代。
 - 首版保守保留旧资源与恢复快照，无自动垃圾回收；大备份采用受限内存解析，峰值内存必须在真机测量，不能提前宣称达到 250MB 目标。
 - 未加入 iPad 独立适配、云服务、支付、旧 XLS、公式计算或合并恢复，与原文默认首版范围一致。

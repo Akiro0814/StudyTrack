@@ -2,6 +2,22 @@ import XCTest
 @testable import StudyTrackCore
 
 final class ImportTests: XCTestCase {
+    func testInvalidRowsCannotSeedSubjectsOrInflatePreviewCreationLists() async throws {
+        let store = try StudyStore(path: ":memory:")
+        let scope = try await store.createUser(name: "甲",semester: "秋季")
+        let date = try LocalDate("2026-10-12")
+        let bad = ExchangeRow(row: 2,semester: "秋季",subject: "数学",name: "错误行",date: date,score: 20000,fullScore: nil,type: .other,classRank: nil,gradeRank: nil,districtRank: nil,reflection: nil)
+        var good = bad; good.row = 3; good.score = 12000; good.fullScore = 15000; good.name = "有效行"
+        var onlyBad = bad; onlyBad.row = 4; onlyBad.semester = "仅有错误的学期"; onlyBad.subject = "不应创建"
+        let plan = try await store.previewImport(ParsedWorkbook(rows: [bad,good,onlyBad],issues: []),scope: scope,fileDigest: "test")
+        XCTAssertEqual(plan.rows.count,1)
+        XCTAssertTrue(plan.newSemesters.isEmpty)
+        XCTAssertEqual(plan.newSubjects,["秋季 / 数学"])
+        let report = try await store.commitImport(plan,validRowsOnly: true,acceptConversions: false)
+        XCTAssertEqual(report.imported,1)
+        let snapshot = try await store.snapshot()
+        XCTAssertEqual(snapshot.subjects.count,1); XCTAssertEqual(snapshot.subjects.first?.fullScore,15000)
+    }
     func testImportAcrossSemestersPreservesSelectionAndReportsDuplicates() async throws {
         let store = try StudyStore(path: ":memory:")
         let scope = try await store.createUser(name: "甲",semester: "秋季")

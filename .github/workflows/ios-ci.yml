@@ -9,7 +9,7 @@ permissions:
   contents: read
 concurrency:
   group: ios-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   simulator:
     runs-on: macos-26
@@ -21,6 +21,10 @@ jobs:
           node-version: '24'
       - name: Check database contracts
         run: node ios/Scripts/check-contracts.mjs
+      - name: Select locked Apple toolchain
+        run: |
+          python3 ios/Scripts/probe-environment.py
+          python3 -c 'import json,os; p=json.load(open("artifacts/Toolchain.candidate.json")); open(os.environ["GITHUB_ENV"],"a").write("DEVELOPER_DIR="+p["developerDirectory"]+"\n")'
       - name: Install pinned XcodeGen
         run: bash ios/Scripts/install-xcodegen.sh
       - uses: actions/cache@v4
@@ -31,7 +35,9 @@ jobs:
           key: spm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ios/Package.resolved', 'ios/Toolchain.lock.json') }}
       - name: Core tests
         working-directory: ios
-        run: swift test --parallel 2>&1 | tee ../core-tests.log
+        run: |
+          set -o pipefail
+          swift test --parallel 2>&1 | tee ../core-tests.log
       - name: Simulator matrix
         run: bash ios/Scripts/test-simulator.sh
       - uses: actions/upload-artifact@v4

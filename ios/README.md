@@ -4,7 +4,7 @@
 
 ## 当前验证状态
 
-见 [`../docs/ios-implementation-progress.md`](../docs/ios-implementation-progress.md)。Linux Swift 业务测试与 iOS SDK 构建是两类证据；仅 macOS 的 `xcodebuild` 成功后才能确认 iOS 编译通过。Toolchain.lock.json 尚未记录实测 Apple 环境，禁止将候选配置视为已验证。
+见 [`../docs/ios-implementation-progress.md`](../docs/ios-implementation-progress.md)。已有 Xcode 26.6 (17F113) 的真机 Release / arm64 IPA 与 iPhone 17 模拟器测试证据，工具链锁记录实际组合。完整机型矩阵、最低 iOS 26.0 与真机安装需分别验收，不将其中一项替代另一项。
 
 ## macOS 开发
 
