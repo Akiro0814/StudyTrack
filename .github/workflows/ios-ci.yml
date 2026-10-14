@@ -1,0 +1,46 @@
+name: iOS CI
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['ios/**', 'shared-spec/**', '.github/workflows/ios-*.yml']
+  push:
+    paths: ['ios/**', 'shared-spec/**', '.github/workflows/ios-*.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ios-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  simulator:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check database contracts
+        run: node ios/Scripts/check-contracts.mjs
+      - name: Install pinned XcodeGen
+        run: bash ios/Scripts/install-xcodegen.sh
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ios/.build
+            ios/.spm
+          key: spm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ios/Package.resolved', 'ios/Toolchain.lock.json') }}
+      - name: Core tests
+        working-directory: ios
+        run: swift test --parallel 2>&1 | tee ../core-tests.log
+      - name: Simulator matrix
+        run: bash ios/Scripts/test-simulator.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-validation-${{ github.sha }}
+          path: |
+            artifacts/
+            core-tests.log
+            ios/Package.resolved
+            ios/StudyTrack.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+          retention-days: 14

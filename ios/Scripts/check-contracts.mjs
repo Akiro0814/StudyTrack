@@ -1,0 +1,30 @@
+import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const db = new DatabaseSync(':memory:');
+db.exec('PRAGMA foreign_keys=ON');
+db.exec(readFileSync(new URL('../StudyTrack/Data/Database/schema.sql', import.meta.url), 'utf8'));
+db.exec("INSERT INTO users VALUES('u1','甲','甲','2026','2026'),('u2','乙','乙','2026','2026')");
+db.exec("INSERT INTO semesters VALUES('t1','u1','秋','秋','2026','2026'),('t2','u2','秋','秋','2026','2026')");
+db.exec("INSERT INTO subjects VALUES('s1','u1','t1','数学','数学',10000,'2026','2026')");
+assert.throws(() => db.exec("INSERT INTO subjects VALUES('s2','u2','t1','数学','数学',10000,'2026','2026')"));
+assert.throws(() => db.exec("INSERT INTO subjects VALUES('s2','u1','t1','数学','数学',10000,'2026','2026')"));
+const insert = db.prepare('INSERT INTO exam_records(id,user_id,semester_id,subject_id,exam_name,normalized_exam_name,exam_date,score_minor,exam_type,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)');
+insert.run('e1','u1','t1','s1','月考','月考','2026-10-12',8950,'monthly','2026','2026');
+assert.throws(() => insert.run('e2','u2','t2','s1','月考','月考','2026-10-12',8950,'monthly','2026','2026'));
+assert.throws(() => insert.run('e2','u1','t1','s1','月考','月考','2026-10-12',8950,'monthly','2026','2026'));
+assert.throws(() => insert.run('e2','u1','t1','s1','期末','期末','2026-10-12',10001,'final','2026','2026'));
+assert.throws(() => db.exec('UPDATE subjects SET full_score_minor=8000'));
+db.exec('BEGIN');
+try {
+  insert.run('e2','u1','t1','s1','期末','期末','2026-10-13',9500,'final','2026','2026');
+  insert.run('e3','u1','t1','s1','期末','期末','2026-10-13',9500,'final','2026','2026');
+  assert.fail('duplicate must fail');
+} catch { db.exec('ROLLBACK'); }
+assert.equal(db.prepare('SELECT count(*) AS n FROM exam_records').get().n, 1);
+assert.throws(() => db.exec('UPDATE exam_records SET class_rank=0'));
+db.exec("DELETE FROM users WHERE id='u1'");
+assert.equal(db.prepare('SELECT count(*) AS n FROM exam_records').get().n, 0);
+assert.equal(db.prepare('SELECT count(*) AS n FROM subjects').get().n, 0);
+assert.equal(db.prepare('SELECT count(*) AS n FROM users').get().n, 1);
+console.log('PASS: scope foreign keys, uniqueness, score checks, rank checks, transaction rollback, cascading deletion');

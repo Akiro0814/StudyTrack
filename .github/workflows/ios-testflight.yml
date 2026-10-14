@@ -1,0 +1,43 @@
+name: iOS TestFlight
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: Unique increasing build number
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: macos-26
+    environment: ios-release
+    timeout-minutes: 60
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      BUNDLE_ID: ${{ vars.BUNDLE_ID }}
+      BUILD_NUMBER: ${{ inputs.build_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash ios/Scripts/install-xcodegen.sh
+      - run: python3 ios/Scripts/probe-environment.py
+      - name: Archive and upload
+        env:
+          SIGNING_P12_BASE64: ${{ secrets.SIGNING_P12_BASE64 }}
+          SIGNING_P12_PASSWORD: ${{ secrets.SIGNING_P12_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.PROFILE_BASE64 }}
+          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: bash ios/Scripts/testflight.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-release-${{ github.sha }}
+          path: |
+            artifacts/*.json
+            artifacts/*.log
+            artifacts/*.xcarchive
+          retention-days: 14

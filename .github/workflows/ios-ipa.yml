@@ -1,0 +1,31 @@
+name: iOS Unsigned IPA
+on:
+  workflow_dispatch:
+  push:
+    paths: ['ios/**', 'shared-spec/**', '.github/workflows/ios-ipa.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ios-ipa-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  package:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      BUILD_NUMBER: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned generator
+        run: bash ios/Scripts/install-xcodegen.sh
+      - name: Build arm64 device IPA for self-signing
+        run: bash ios/Scripts/build-unsigned-ipa.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: StudyTrack-unsigned-IPA-${{ github.run_number }}
+          path: |
+            artifacts/StudyTrack-unsigned.ipa
+            artifacts/ipa-*
+            ios/Package.resolved
+          retention-days: 30

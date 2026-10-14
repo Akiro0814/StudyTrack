@@ -1,0 +1,89 @@
+name: StudyTrack
+options:
+  minimumXcodeGenVersion: 2.44.1
+  deploymentTarget:
+    iOS: '26.0'
+  developmentLanguage: zh-Hans
+  createIntermediateGroups: true
+packages:
+  StudyTrackCore:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: '6.0'
+    IPHONEOS_DEPLOYMENT_TARGET: '26.0'
+    TARGETED_DEVICE_FAMILY: '1'
+    MARKETING_VERSION: '1.0.0'
+    CURRENT_PROJECT_VERSION: '1'
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    GENERATE_INFOPLIST_FILE: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+    CODE_SIGN_STYLE: Automatic
+configFiles:
+  Debug: Config/Debug.xcconfig
+  Release: Config/Release.xcconfig
+targets:
+  StudyTrack:
+    type: application
+    platform: iOS
+    sources:
+      - StudyTrack/App
+      - StudyTrack/Features
+      - StudyTrack/DesignSystem
+      - path: StudyTrack/Resources
+        excludes: [Info.plist]
+    info:
+      path: StudyTrack/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: 学迹
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        LSSupportsOpeningDocumentsInPlace: true
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: StudyTrack Backup
+            LSHandlerRank: Owner
+            LSItemContentTypes: [com.repea.studytrack.ios.backup]
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: com.repea.studytrack.ios.backup
+            UTTypeDescription: StudyTrack Backup
+            UTTypeConformsTo: [public.zip-archive]
+            UTTypeTagSpecification:
+              public.filename-extension: [studytrackbackup]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.repea.studytrack.ios
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.education
+    dependencies:
+      - package: StudyTrackCore
+  StudyTrackTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [StudyTrackTests]
+    dependencies:
+      - target: StudyTrack
+      - package: StudyTrackCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.repea.studytrack.ios.tests
+  StudyTrackUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [StudyTrackUITests]
+    dependencies:
+      - target: StudyTrack
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.repea.studytrack.ios.uitests
+schemes:
+  StudyTrack:
+    build:
+      targets:
+        StudyTrack: all
+    test:
+      gatherCoverageData: true
+      targets: [StudyTrackTests, StudyTrackUITests]
+    archive:
+      config: Release

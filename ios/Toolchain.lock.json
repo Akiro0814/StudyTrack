@@ -1,0 +1,14 @@
+{
+  "status": "awaiting-macos-verification",
+  "xcodeVersion": null,
+  "developerDirectory": null,
+  "runtimeID": null,
+  "deviceTypeIDs": [],
+  "minimumIOS": "26.0",
+  "swiftLanguageMode": "6.0",
+  "xcodegen": {
+    "version": "2.44.1",
+    "url": "https://github.com/yonaskolb/XcodeGen/releases/download/2.44.1/xcodegen.zip",
+    "sha256": "a2e905fb68446e9bb4008cdfe2e13e3f176d0cbcca828b71770f8e53fca91b73"
+  }
+}

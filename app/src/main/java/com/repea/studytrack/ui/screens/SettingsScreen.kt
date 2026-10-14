@@ -76,6 +76,8 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     var showImportHelp by remember { mutableStateOf(false) }
+    var showFullBackupConfirm by remember { mutableStateOf(false) }
+    var sourceTimeZone by remember { mutableStateOf("Asia/Shanghai") }
     var showUserDialog by remember { mutableStateOf(false) }
     var showSemesterDialog by remember { mutableStateOf(false) }
     var editingUser by remember { mutableStateOf<UserProfile?>(null) }
@@ -141,6 +143,34 @@ fun SettingsScreen(
             uri?.let { viewModel.exportData(it) }
         }
     )
+
+    val fullBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip"),
+        onResult = { uri: Uri? -> uri?.let { viewModel.exportFullBackup(it, sourceTimeZone) } }
+    )
+    if (showFullBackupConfirm) {
+        AlertDialog(
+            onDismissRequest = { showFullBackupConfirm = false },
+            title = { Text("导出完整迁移备份") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("包括全部用户、学期、空科目、成绩、设置与可读取资源。文件未加密。请确认历史考试日期录入时的原始时区；超精度、日期重复或缺失资源会阻止导出。")
+                    StudyTextField(value = sourceTimeZone, onValueChange = { sourceTimeZone = it }, label = "原始时区")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (runCatching { java.time.ZoneId.of(sourceTimeZone) }.isSuccess) {
+                        showFullBackupConfirm = false
+                        fullBackupLauncher.launch("StudyTrack_${System.currentTimeMillis()}.studytrackbackup")
+                    } else {
+                        android.widget.Toast.makeText(context, "时区无效，例如 Asia/Shanghai", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }) { Text("确认并选择保存位置") }
+            },
+            dismissButton = { TextButton(onClick = { showFullBackupConfirm = false }) { Text("取消") } }
+        )
+    }
 
     if (showUserDialog) {
         AlertDialog(
@@ -435,6 +465,12 @@ fun SettingsScreen(
             GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), contentPadding = 14.dp) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     StudySectionHeader(title = "数据管理")
+                    StudySettingRow(
+                        icon = Icons.Default.Storage,
+                        title = "导出完整 iOS 迁移备份",
+                        subtitle = "全部用户、学期、空科目、设置与资源",
+                        onClick = { showFullBackupConfirm = true }
+                    )
                     StudySettingRow(
                         icon = Icons.Default.Storage,
                         title = "导出成绩报告",

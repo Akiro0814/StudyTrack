@@ -1,0 +1,28 @@
+{
+  "sourceLanguage": "zh-Hans",
+  "strings": {
+    "学迹": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"学迹"}}}},
+    "首页": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"首页"}}}},
+    "科目": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"科目"}}}},
+    "成绩": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"成绩"}}}},
+    "分析": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"分析"}}}},
+    "设置": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"设置"}}}},
+    "保存": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"保存"}}}},
+    "取消": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"取消"}}}},
+    "删除": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"删除"}}}},
+    "添加成绩": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"添加成绩"}}}},
+    "批量录入": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"批量录入"}}}},
+    "科目名称": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"科目名称"}}}},
+    "满分": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"满分"}}}},
+    "分数": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"分数"}}}},
+    "日期": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"日期"}}}},
+    "类型": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"类型"}}}},
+    "反思": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"反思"}}}},
+    "用户管理": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"用户管理"}}}},
+    "学期管理": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"学期管理"}}}},
+    "个性化": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"个性化"}}}},
+    "数据管理": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"数据管理"}}}},
+    "关于与支持": {"localizations":{"zh-Hans":{"stringUnit":{"state":"translated","value":"关于与支持"}}}}
+  },
+  "version": "1.0"
+}

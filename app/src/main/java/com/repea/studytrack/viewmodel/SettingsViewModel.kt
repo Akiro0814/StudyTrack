@@ -11,6 +11,7 @@ import com.repea.studytrack.repository.StudyRepository
 import com.repea.studytrack.repository.UserPreferencesRepository
 import com.repea.studytrack.utils.ExcelHelper
 import com.repea.studytrack.utils.ExcelImportResult
+import com.repea.studytrack.utils.BackupExporterV1
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,8 +25,26 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val excelHelper: ExcelHelper,
     private val repository: StudyRepository,
-    private val prefsRepository: UserPreferencesRepository
+    private val prefsRepository: UserPreferencesRepository,
+    private val backupExporterV1: BackupExporterV1
 ) : ViewModel() {
+
+    private var fullBackupRunning = false
+
+    fun exportFullBackup(uri: Uri, sourceZone: String) {
+        if (fullBackupRunning) return
+        fullBackupRunning = true
+        viewModelScope.launch {
+            try {
+                backupExporterV1.export(uri, sourceZone)
+                _exportStatus.emit("完整备份已导出。此文件未加密，请妥善保管。")
+            } catch (e: Exception) {
+                _exportStatus.emit("完整备份失败：${e.message ?: "无法读取数据或资源"}")
+            } finally {
+                fullBackupRunning = false
+            }
+        }
+    }
 
     private val _exportStatus = MutableSharedFlow<String>()
     val exportStatus = _exportStatus.asSharedFlow()

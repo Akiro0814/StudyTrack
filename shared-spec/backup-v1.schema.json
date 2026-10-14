@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://studytrack.local/spec/backup-v1.schema.json",
+  "title": "StudyTrack backup v1 data.json",
+  "type": "object",
+  "required": ["users", "semesters", "subjects", "examRecords", "assets", "legacyIDMap"],
+  "additionalProperties": false,
+  "properties": {
+    "users": {"type":"array","minItems":1,"items":{"$ref":"#/$defs/user"}},
+    "semesters": {"type":"array","minItems":1,"items":{"$ref":"#/$defs/semester"}},
+    "subjects": {"type":"array","items":{"$ref":"#/$defs/subject"}},
+    "examRecords": {"type":"array","items":{"$ref":"#/$defs/exam"}},
+    "assets": {"type":"array","items":{"$ref":"#/$defs/asset"}},
+    "legacyIDMap": {"type":"array","items":{"$ref":"#/$defs/legacyID"}}
+  },
+  "$defs": {
+    "id": {"type":"string","pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+    "name": {"type":"string","minLength":1,"maxLength":100},
+    "score": {"type":"string","pattern":"^(0|[1-9][0-9]{0,7})(\\.[0-9]{1,2})?$"},
+    "timestamp": {"type":"string","format":"date-time"},
+    "rank": {"type":["integer","null"],"minimum":1},
+    "user": {
+      "type":"object","required":["id","name","createdAt","updatedAt"],"additionalProperties":false,
+      "properties":{"id":{"$ref":"#/$defs/id"},"name":{"$ref":"#/$defs/name"},"createdAt":{"$ref":"#/$defs/timestamp"},"updatedAt":{"$ref":"#/$defs/timestamp"}}
+    },
+    "semester": {
+      "type":"object","required":["id","userID","name","createdAt","updatedAt"],"additionalProperties":false,
+      "properties":{"id":{"$ref":"#/$defs/id"},"userID":{"$ref":"#/$defs/id"},"name":{"$ref":"#/$defs/name"},"createdAt":{"$ref":"#/$defs/timestamp"},"updatedAt":{"$ref":"#/$defs/timestamp"}}
+    },
+    "subject": {
+      "type":"object","required":["id","userID","semesterID","name","fullScore","createdAt","updatedAt"],"additionalProperties":false,
+      "properties":{"id":{"$ref":"#/$defs/id"},"userID":{"$ref":"#/$defs/id"},"semesterID":{"$ref":"#/$defs/id"},"name":{"$ref":"#/$defs/name"},"fullScore":{"$ref":"#/$defs/score"},"createdAt":{"$ref":"#/$defs/timestamp"},"updatedAt":{"$ref":"#/$defs/timestamp"}}
+    },
+    "exam": {
+      "type":"object","required":["id","userID","semesterID","subjectID","name","date","score","type","createdAt","updatedAt"],"additionalProperties":false,
+      "properties":{"id":{"$ref":"#/$defs/id"},"userID":{"$ref":"#/$defs/id"},"semesterID":{"$ref":"#/$defs/id"},"subjectID":{"$ref":"#/$defs/id"},"name":{"type":"string","maxLength":100},"date":{"type":"string","format":"date","pattern":"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},"score":{"$ref":"#/$defs/score"},"type":{"enum":["monthly","midterm","final","other"]},"classRank":{"$ref":"#/$defs/rank"},"gradeRank":{"$ref":"#/$defs/rank"},"districtRank":{"$ref":"#/$defs/rank"},"reflection":{"type":["string","null"],"maxLength":10000},"attachmentID":{"anyOf":[{"$ref":"#/$defs/id"},{"type":"null"}]},"createdAt":{"$ref":"#/$defs/timestamp"},"updatedAt":{"$ref":"#/$defs/timestamp"}}
+    },
+    "asset": {
+      "type":"object","required":["id","relativePath","mimeType","sha256","byteCount"],"additionalProperties":false,
+      "properties":{"id":{"$ref":"#/$defs/id"},"relativePath":{"type":"string","pattern":"^assets/[^/\\\\:]+$"},"mimeType":{"type":"string","minLength":1},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"byteCount":{"type":"integer","minimum":0,"maximum":524288000}}
+    },
+    "legacyID": {
+      "type":"object","required":["sourceDatasetID","entityType","legacyID","canonicalID"],"additionalProperties":false,
+      "properties":{"sourceDatasetID":{"$ref":"#/$defs/id"},"entityType":{"enum":["user","semester","subject","exam"]},"legacyID":{"type":"string","minLength":1},"canonicalID":{"$ref":"#/$defs/id"}}
+    },
+    "preferences": {
+      "type":"object","required":["theme","accent","multiUserEnabled","nameNormalizationVersion","platformExtensions"],"additionalProperties":false,
+      "properties":{"theme":{"enum":["simple","glass"]},"accent":{"enum":["blue","green","orange","purple"]},"wallpaperAssetID":{"anyOf":[{"$ref":"#/$defs/id"},{"type":"null"}]},"multiUserEnabled":{"type":"boolean"},"currentUserID":{"anyOf":[{"$ref":"#/$defs/id"},{"type":"null"}]},"currentSemesterID":{"anyOf":[{"$ref":"#/$defs/id"},{"type":"null"}]},"nameNormalizationVersion":{"const":1},"platformExtensions":{"type":"object"}}
+    },
+    "manifest": {
+      "type":"object","required":["format","formatVersion","backupID","sourceDatasetID","sourcePlatform","sourceAppVersion","exportedAt","recordCounts","files"],"additionalProperties":false,
+      "properties":{"format":{"const":"studytrack-backup"},"formatVersion":{"const":1},"backupID":{"$ref":"#/$defs/id"},"sourceDatasetID":{"$ref":"#/$defs/id"},"sourcePlatform":{"enum":["android","ios"]},"sourceAppVersion":{"type":"string"},"exportedAt":{"$ref":"#/$defs/timestamp"},"recordCounts":{"type":"object","required":["users","semesters","subjects","examRecords","assets","legacyIDMap"],"additionalProperties":{"type":"integer","minimum":0}},"files":{"type":"array","maxItems":9999,"items":{"type":"object","required":["path","byteCount","sha256"],"additionalProperties":false,"properties":{"path":{"type":"string","minLength":1},"byteCount":{"type":"integer","minimum":0},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"}}}}}
+    }
+  }
+}

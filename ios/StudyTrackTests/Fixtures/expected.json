@@ -1,0 +1,14 @@
+{
+  "users": 2,
+  "semesters": 4,
+  "subjects": 4,
+  "examRecords": 2,
+  "scope": {
+    "userID": "00000000-0000-4000-8000-000000000001",
+    "semesterID": "00000000-0000-4000-8000-000000000010"
+  },
+  "average": 100,
+  "minimum": 80,
+  "maximum": 120,
+  "excellenceRate": 0
+}
