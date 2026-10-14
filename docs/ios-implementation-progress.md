@@ -19,13 +19,13 @@ Excel 引擎候选的实施取舍：使用 ZIPFoundation + Foundation XMLParser 
 
 ## 验证边界
 
-当前目录没有 `.git`，不初始化或推送未经确认的远程。Windows 没有 Xcode、Swift 或已授权 Apple 签名材料。依赖锁与工具链实测信息由 macOS 脚本输出 artifact，不伪造已通过的组合。CI、TestFlight、真机、最低系统和性能验收须有真实运行证据后才能关闭。
+原始工作目录没有 `.git`；在用户指定仓库后，使用独立克隆目录提交和构建。Windows 没有 Xcode 或 Apple 签名材料；Swift 核心逻辑由 Linux 容器验证，App 构建与模拟器由 GitHub macOS CI 验证。CI、真机、最低系统和性能验收分别记录，不能相互替代。
 
 ## 用户确认的交付方式
 
 用户指定真实仓库 `https://github.com/L1angK1NG/StudyTrack`，无 Apple Developer 账号，使用自己的签名证书安装。交付改为 macOS CI 编译 iphoneos/arm64 Release，再生成 `Payload/StudyTrack.app` 的未签名 IPA，供用户自行重签。TestFlight 工作流保留为可选发布路线，不作为本次交付前置条件。
 
-真实仓库已克隆到独立目录 `E:\Project\StudyTrack-iOS-delivery`，不重建原目录历史；改动将在独立开发分支上构建验证。
+真实仓库已克隆到独立目录 `E:\Project\StudyTrack-iOS-delivery`，不重建原目录历史；源码已推送至 `codex/ios-native-ipa`，主分支未修改。
 
 ## 已实现的代码范围
 
@@ -44,19 +44,18 @@ Excel 引擎候选的实施取舍：使用 ZIPFoundation + Foundation XMLParser 
 ## 当前已取得的验证证据
 
 1. Windows Node 24 直接执行实际 schema.sql：作用域外键、唯一键、分数/排名检查、事务回滚、级联删除通过。
-2. Swift 6.1.3 / Linux 容器：19 项 XCTest 全部通过。覆盖两位分数、评级边界、严格日期/Excel 日期、规范化、数据隔离、重名错误、原子批量、分页摘要、字面搜索、跨学期/重复/过期导入、恢复与未知 Android 扩展、用户删除选择修复、独立夹具、图表保峰谷抽稀、磁盘重新打开与 10000 行数据。
+2. Swift 6.1.3 / Linux 容器：21 项 XCTest 全部通过。覆盖两位分数、评级边界、严格日期/Excel 日期、规范化、数据隔离、重名错误、原子批量、分页摘要、字面搜索、跨学期/重复/过期导入、错误行不影响后续科目规划、合并范围精确识别表头行、恢复与未知 Android 扩展、用户删除选择修复、独立夹具、图表保峰谷抽稀、磁盘重新打开与 10000 行数据。
 3. 10000 行的预览、导入、重新打开、完整备份与校验约 18 秒，为本次宿主机合成数据测量，不代表 iPhone 性能或内存验收。
 4. 独立 openpyxl 读写和 Apache POI **5.2.3** 互操作通过；POI 生成共享字符串工作簿由 Swift 读取，iOS 导出由 POI 读取。验证的是交换引擎，不冒充 Android 应用界面往返验收。
 5. Python 独立检查 workflow YAML、配置 JSON、Privacy plist、backup-v1 schema 和黄金/导出备份通过。Bash 语法检查、SwiftUI 源码语法解析通过。
 6. 实际 Android `BackupValues.kt` 使用 Kotlin/JVM 编译运行，精度、原时区和 NFC 规则检查通过。随后修复原有 Wrapper（官方 SHA-256 校验通过）、写死 JDK 路径、依赖源优先级与 SDK 包名，Android 全项目 `compileDebugKotlin` 和 `testDebugUnitTest` 已通过：[run 38531794433](https://github.com/L1angK1NG/StudyTrack/actions/runs/38531794433)。编译仍有原项目 AGP 8.13.2 / SDK 37.0 支持范围警告，不将编译通过扩大为 Android 真机迁移验收。
-7. GitHub macOS 26 / Xcode **26.6 (17F113)** 真机 Release 连续三次构建成功。最终交付来自 commit `9720839ce924f6bacb0adfec90d143ad5138354e`、[run 38531241685](https://github.com/L1angK1NG/StudyTrack/actions/runs/38531241685)：`StudyTrack-unsigned.ipa`，3,538,685 字节，build 3，Bundle ID `com.repea.studytrack.ios`，最低 iOS 26.0，设备族 `[1]`，arm64。已核对 ZIP 结构、Info.plist 和 Mach-O 文件头，SHA-256 为 `20fca1602382060a2d40215e9cde5150c6033c20f2f73930879ebaf546cea97d`。源码后续 Android/文档改动不改变该 IPA 的应用代码。
-8. 首轮 iPhone 17 / iOS 26.5 模拟器的 18 项业务单测和 1 项 UI 测试通过，日志含 `TEST SUCCEEDED`，引导/创建科目流程实际运行。首轮整体工作流在首设备完成后取消并保留 xcresult，不能据此宣称三设备矩阵通过。新版矩阵增加串行与测试超时，继续验证最终的 19 项业务测试。
+7. GitHub macOS 26 / Xcode **26.6 (17F113)** 的 iphoneos Release 构建成功。最终交付来自 commit `c3f0911bd19061c44f57444bb669424700435abf`、[run 38535430693](https://github.com/L1angK1NG/StudyTrack/actions/runs/38535430693)：`StudyTrack-unsigned.ipa`，3,538,924 字节，build 6，Bundle ID `com.repea.studytrack.ios`，最低 iOS 26.0，设备族 `[1]`，arm64。已核对 ZIP CRC、Payload 结构、Info.plist 和 Mach-O 文件头，SHA-256 为 `4fe489559d8ec35c67b2cd425b1df9f24703ca1c4095a2950c9765cd61355974`。本地交付路径为 `E:\Project\StudyTrack\StudyTrack-unsigned.ipa`，须由用户自行重签安装。
+8. 同一最终源码 commit 的三机型矩阵全部通过：[run 38535430696](https://github.com/L1angK1NG/StudyTrack/actions/runs/38535430696)。iOS 26.5 模拟器分别运行 iPhone SE（第 3 代）、iPhone 17、iPhone 17 Pro Max；每台均通过 21 项业务单测和 1 项 UI 测试，日志均含 `TEST SUCCEEDED`，引导/创建科目流程实际运行。三个 job ID 分别为 `115760446993`、`115760447117`、`115760446786`。这是模拟器证据，未替代用户 iPhone 安装和人工交互验收。
 
 本机证据位于未提交的 `artifacts/`，包含测试日志、独立互操作日志和实际 IPA。源码与夹具在开发分支提交，构建产物由 Actions artifacts 提供。
 
 ## 尚需真实设备或额外环境的验收
 
-- 模拟器 App/Unit/UI 测试矩阵结果与最终 commit 的 IPA 持续跟进，以实际运行结果更新本节。
 - iOS 26.0 最低系统、用户自行重签后的安装、原生玻璃观感、文件/iCloud 选择、返回手势、最大动态字体、VoiceOver、后台终止恢复及真机性能尚未验收。
 - Android 完整应用编译已通过；实际 Android→iOS 全量资源迁移仍需两台设备验证，不能用编译、JVM 规则与 POI 引擎测试替代。
 - 首版保守保留旧资源与恢复快照，无自动垃圾回收；大备份采用受限内存解析，峰值内存必须在真机测量，不能提前宣称达到 250MB 目标。
