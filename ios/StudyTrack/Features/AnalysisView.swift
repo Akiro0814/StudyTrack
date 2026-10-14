@@ -100,9 +100,11 @@ struct ExamTrendCard: View {
             ForEach(points) { point in
                 if metric == 0 {
                     AreaMark(x: .value("考试序号",Double(point.position)),yStart: .value("起点",0),yEnd: .value("分数",point.value))
+                        .interpolationMethod(.monotone)
                         .foregroundStyle(LinearGradient(colors: [model.accent.opacity(0.20),model.accent.opacity(0.01)],startPoint: .top,endPoint: .bottom))
                 }
                 LineMark(x: .value("考试序号",Double(point.position)),y: .value(metric == 0 ? "分数" : "排名",point.value))
+                    .interpolationMethod(.monotone)
                     .foregroundStyle(model.accent).lineStyle(StrokeStyle(lineWidth: 2.5,lineCap: .round,lineJoin: .round))
                 PointMark(x: .value("考试序号",Double(point.position)),y: .value("数值",point.value)).symbolSize(exams.count > 40 ? 12 : 42).foregroundStyle(model.accent)
                     .accessibilityLabel("第 \(point.position) 次，\(point.exam.date.description)，\(point.exam.name)，\(metric == 0 ? Score.text(point.exam.score) + " 分" : String(Int(point.value)) + " 名")")
