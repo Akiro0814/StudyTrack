@@ -23,7 +23,7 @@ jobs:
           gradle-version: '9.5.0'
       - name: Prepare SDK
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-37'
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-37.0'
           printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
       - name: Compile and test Android adapter
         run: gradle -Dorg.gradle.java.home="$JAVA_HOME" :app:compileDebugKotlin :app:testDebugUnitTest --console=plain
