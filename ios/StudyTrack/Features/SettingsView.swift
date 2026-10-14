@@ -8,7 +8,7 @@ struct SettingsView: View {
             VStack(spacing: 12) {
                 BrandMark(size: 80)
                 Text("学迹").font(.system(.largeTitle,design: .rounded,weight: .bold))
-                Text("StudyTrack").font(.subheadline.weight(.medium)).tracking(2).foregroundStyle(.secondary)
+                Text("StudyTrack").font(.subheadline.weight(.medium)).tracking(2).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.6)
                 Text("留住努力的轨迹。").font(.caption).foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity).padding(.vertical,20).accessibilityIdentifier("settings.brand")
             NavigationLink { ProfileAppearanceView() } label: {

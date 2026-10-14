@@ -76,6 +76,7 @@ struct HomeView: View {
             .toolbar { ToolbarItem(placement: .topBarTrailing) { NavigationLink { SettingsView() } label: { Image(systemName: "slider.horizontal.3") }.accessibilityLabel("设置") } }
             .refreshable { do { try await model.reload() } catch { model.error = model.friendly(error) } }
             .recordEntry($recording)
+            .sensoryFeedback(.success,trigger: model.home.total)
             .sheet(item: $editing) { exam in if let scope = model.scope { ExamEditorView(scope: scope,existing: exam) } }
     }
 }

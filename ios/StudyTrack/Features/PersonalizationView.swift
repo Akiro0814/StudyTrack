@@ -19,7 +19,7 @@ struct PersonalizationView: View {
                     HStack(spacing: 12) { AvatarView(size: 44); Text(model.currentUser?.name ?? "学迹").font(.title3.bold()); Spacer(); Image(systemName: "sparkle").foregroundStyle(.tint) }
                     Text("每一次记录，都值得被看见。").font(.subheadline).foregroundStyle(.secondary)
                 }.studySurface().padding(16)
-            }.frame(height: 240).clipShape(RoundedRectangle(cornerRadius: 28)).accessibilityIdentifier("appearance.preview")
+            }.frame(height: 240).clipShape(RoundedRectangle(cornerRadius: 28)).accessibilityElement(children: .contain).accessibilityIdentifier("appearance.preview")
             VStack(alignment: .leading,spacing: 16) {
                 SectionHeading(title: "内容质感")
                 HStack(spacing: 12) {

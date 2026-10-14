@@ -92,7 +92,7 @@ struct ExamTrendCard: View {
             } else {
                 ContentUnavailableView("还没有这类排名",systemImage: "list.number",description: Text("编辑成绩时可以补充排名。"))
             }
-        }.studySurface().onChange(of: metric) { _,_ in selectedPosition = nil }
+        }.studySurface().onChange(of: metric) { _,_ in selectedPosition = nil }.sensoryFeedback(.selection,trigger: metric)
     }
     var trendChart: some View {
         Chart {

@@ -17,7 +17,7 @@ struct SummaryView: View {
         metric("优秀率",summary.excellenceRate.map { "\($0)%" } ?? "—")
     }
     func metric(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading,spacing: 8) { Text(title).font(.caption).foregroundStyle(.secondary); Text(value).font(.system(.title2,design: .rounded,weight: .bold)).monospacedDigit().contentTransition(.numericText()) }
+        VStack(alignment: .leading,spacing: 8) { Text(title).font(.caption).foregroundStyle(.secondary); Text(value).font(.system(.title2,design: .rounded,weight: .bold)).monospacedDigit().contentTransition(.numericText()).fixedSize(horizontal: true,vertical: false) }
             .frame(maxWidth: .infinity,alignment: .leading)
             .accessibilityElement(children: .combine)
     }

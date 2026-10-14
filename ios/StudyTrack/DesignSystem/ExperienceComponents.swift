@@ -106,7 +106,7 @@ struct SubjectFilter: View {
                 chip("全部科目",id: "")
                 ForEach(model.subjects) { chip($0.name,id: $0.id) }
             }.padding(.vertical,2)
-        }.scrollIndicators(.hidden).accessibilityLabel("按科目筛选")
+        }.scrollIndicators(.hidden).accessibilityLabel("按科目筛选").sensoryFeedback(.selection,trigger: selection)
     }
     func chip(_ name: String,id: String) -> some View {
         Button { selection = id } label: {

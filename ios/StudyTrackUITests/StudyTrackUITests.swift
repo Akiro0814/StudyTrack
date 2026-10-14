@@ -7,15 +7,15 @@ final class StudyTrackUITests: XCTestCase {
         XCTAssertTrue(app.buttons["home.avatar"].exists)
         snapshot(app,"01-home-wallpaper")
         app.tabBars.buttons["分析"].tap()
-        XCTAssertTrue(app.otherElements["analysis.chart"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["analysis.chart"].firstMatch.waitForExistence(timeout: 10))
         snapshot(app,"02-analysis-same-day")
         app.segmentedControls.buttons["班排"].firstMatch.tap()
         snapshot(app,"03-ranking-with-missing-value")
         app.tabBars.buttons["设置"].tap()
-        XCTAssertTrue(app.otherElements["settings.brand"].waitForExistence(timeout: 5) || app.staticTexts["StudyTrack"].exists)
+        XCTAssertTrue(app.staticTexts["StudyTrack"].waitForExistence(timeout: 5))
         snapshot(app,"04-settings-brand")
         app.buttons["settings.appearance"].tap()
-        XCTAssertTrue(app.otherElements["appearance.preview"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["appearance.preview"].firstMatch.waitForExistence(timeout: 5))
         snapshot(app,"05-personalization")
     }
     @MainActor func testDarkLargeTypeWithWallpaper() throws {
