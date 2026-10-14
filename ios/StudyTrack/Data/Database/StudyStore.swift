@@ -76,6 +76,7 @@ public actor StudyStore: ExamRepository {
         let name = try Self.name(name)
         return try queue.write { db in
             let key = id ?? Self.id(), now = Self.now()
+            guard try Int.fetchOne(db,sql: "SELECT count(*) FROM semesters WHERE user_id=? AND normalized_name=? AND id<>?",arguments: [userID,normalize(name),key]) == 0 else { throw StudyError.duplicate }
             if id == nil {
                 try db.execute(sql: "INSERT INTO semesters VALUES(?,?,?,?,?,?)", arguments: [key,userID,name,normalize(name),now,now])
             } else {
@@ -124,10 +125,11 @@ public actor StudyStore: ExamRepository {
         guard fullScore > 0, fullScore <= Score.maximum else { throw StudyError.invalid("满分必须大于零。") }
         return try queue.write { db in
             let key = id ?? Self.id(), now = Self.now()
+            guard try Int.fetchOne(db,sql: "SELECT count(*) FROM subjects WHERE user_id=? AND semester_id=? AND normalized_name=? AND id<>?",arguments: [scope.userID,scope.semesterID,normalize(name),key]) == 0 else { throw StudyError.duplicate }
             if id == nil {
                 try db.execute(sql: "INSERT INTO subjects VALUES(?,?,?,?,?,?,?,?)", arguments: [key,scope.userID,scope.semesterID,name,normalize(name),fullScore,now,now])
             } else {
-                let maxScore = try Int64.fetchOne(db,sql: "SELECT MAX(score_minor) FROM exam_records WHERE subject_id=?", arguments: [key]) ?? 0
+                let maxScore = try Int64.fetchOne(db,sql: "SELECT MAX(score_minor) FROM exam_records WHERE subject_id=? AND user_id=? AND semester_id=?", arguments: [key,scope.userID,scope.semesterID]) ?? 0
                 guard fullScore >= maxScore else { throw StudyError.invalid("满分不能低于历史最高成绩 \(Score.text(maxScore))。") }
                 try db.execute(sql: "UPDATE subjects SET name=?,normalized_name=?,full_score_minor=?,updated_at=? WHERE id=? AND user_id=? AND semester_id=?", arguments: [name,normalize(name),fullScore,now,key,scope.userID,scope.semesterID])
                 guard db.changesCount == 1 else { throw StudyError.notFound }

@@ -106,7 +106,7 @@ struct AboutView: View {
         List {
             Section { Label("学迹 StudyTrack",systemImage: "chart.xyaxis.line").font(.title2.bold()); Text("iOS 1.0 · 离线成绩记录与分析") }
             Section("隐私") { Text("成绩、用户档案、备注与壁纸保存在本机。应用不接入广告、网络账号或分析服务。导出文件包含个人信息，完整备份默认未加密，请自行保管。") }
-            Section("支持") { Text("如需反馈问题，请附上应用版本和重现步骤，避免公开真实姓名与成绩。"); Link("项目主页",destination: URL(string: "https://github.com/wznb666-0814/StudyTrack")!) }
+            Section("支持") { Text("如需反馈问题，请附上应用版本和重现步骤，避免公开真实姓名与成绩。"); Link("项目主页",destination: URL(string: "https://github.com/L1angK1NG/StudyTrack")!) }
             Section("开源组件") {
                 Text("GRDB.swift · MIT\nZIPFoundation · MIT\nSwift Crypto · Apache 2.0（仅跨平台测试）")
                 Text("完整许可随源码的第三方许可目录提供。")

@@ -1,0 +1,34 @@
+name: Android Migration Adapter
+on:
+  workflow_dispatch:
+  push:
+    paths: ['app/**/Backup*.kt', 'app/**/SettingsViewModel.kt', 'app/**/SettingsScreen.kt', '.github/workflows/android-migration.yml']
+permissions:
+  contents: read
+concurrency:
+  group: android-migration-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Prepare SDK
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-37'
+          printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
+      - name: Compile and test Android adapter
+        run: gradle -Dorg.gradle.java.home="$JAVA_HOME" :app:compileDebugKotlin :app:testDebugUnitTest --console=plain
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-migration-tests
+          path: app/build/reports/tests/

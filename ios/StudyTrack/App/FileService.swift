@@ -40,7 +40,7 @@ actor FileService {
             let asset = snapshot.assets[i]
             guard let data = backup.resources[asset.relativePath] else { throw StudyError.corrupt("恢复资源缺失。") }
             let ext = URL(fileURLWithPath: asset.relativePath).pathExtension
-            let path = "assets/\(asset.sha256)\(ext.isEmpty ? "" : "."+ext)"
+            let path = "assets/\(asset.sha256)-\(asset.id)\(ext.isEmpty ? "" : "."+ext)"
             try writeImmutable(data,path: path); snapshot.assets[i].relativePath = path
         }; return snapshot
     }

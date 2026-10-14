@@ -21,6 +21,7 @@ final class AppModel {
     var selectionRevision = 0
     var wallpaper: UIImage?
     private var loadedWallpaperID: String?
+    private var loadedWallpaperRevision = -1
     var accent: Color {
         switch preferences.accent { case "green": .green; case "orange": .orange; case "purple": .purple; default: .blue }
     }
@@ -53,11 +54,12 @@ final class AppModel {
         }
         guard revision == selectionRevision else { return }
         preferences = p; users = u; semesters = terms; subjects = subs; home = page
-        if p.wallpaperAssetID != loadedWallpaperID {
+        if p.wallpaperAssetID != loadedWallpaperID || loadedWallpaperRevision != selectionRevision {
             if let id = p.wallpaperAssetID, let snapshot = try? await store.snapshot(), let asset = snapshot.assets.first(where: { $0.id == id }), let data = try? await files?.wallpaper(asset) {
                 wallpaper = UIImage(data: data)
             } else { wallpaper = nil }
             loadedWallpaperID = p.wallpaperAssetID
+            loadedWallpaperRevision = selectionRevision
         }
     }
     @discardableResult func perform(onError: ((String) -> Void)? = nil, _ action: () async throws -> Void) async -> Bool {

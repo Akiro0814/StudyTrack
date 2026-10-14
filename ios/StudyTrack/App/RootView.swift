@@ -21,7 +21,7 @@ struct RootView: View {
                     Tab("分析",systemImage: "chart.xyaxis.line",value: 3) { NavigationStack { AnalysisView() } }
                     Tab("设置",systemImage: "gearshape",value: 4) { NavigationStack { SettingsView() } }
                 }.id(model.selectionRevision)
-                    .scrollContentBackground(model.wallpaper == nil ? .automatic : .hidden)
+                    .scrollContentBackground(model.wallpaper != nil && model.preferences.theme == "glass" ? .hidden : .automatic)
                     .background {
                         if let wallpaper = model.wallpaper, model.preferences.theme == "glass" {
                             GeometryReader { geometry in
@@ -34,11 +34,8 @@ struct RootView: View {
         }
         .disabled(model.busy)
         .overlay { if model.busy { ProgressView().padding(24).background(.regularMaterial,in: RoundedRectangle(cornerRadius: 18)) } }
-        .alert("操作未完成",isPresented: Binding(get: { model.error != nil },set: { if !$0 { model.error = nil } })) {
-            Button("好",role: .cancel) { model.error = nil }
-        } message: { Text(model.error ?? "") }
-        .alert("学迹",isPresented: Binding(get: { model.notice != nil },set: { if !$0 { model.notice = nil } })) {
-            Button("好",role: .cancel) { model.notice = nil }
-        } message: { Text(model.notice ?? "") }
+        .alert(model.error != nil ? "操作未完成" : "学迹",isPresented: Binding(get: { model.error != nil || model.notice != nil },set: { if !$0 { model.error = nil; model.notice = nil } })) {
+            Button("好",role: .cancel) { model.error = nil; model.notice = nil }
+        } message: { Text(model.error ?? model.notice ?? "") }
     }
 }

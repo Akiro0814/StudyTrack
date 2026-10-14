@@ -2,6 +2,15 @@ import XCTest
 @testable import StudyTrackCore
 
 final class RepositoryTests: XCTestCase {
+    func testDuplicateNamesReturnActionableDomainError() async throws {
+        let store = try StudyStore(path: ":memory:")
+        let scope = try await store.createUser(name: "甲",semester: "秋季")
+        _ = try await store.saveSubject(id: nil,name: "数学",fullScore: 10000,scope: scope)
+        do { _ = try await store.saveSubject(id: nil,name: " 数学 ",fullScore: 10000,scope: scope); XCTFail("重名应失败") }
+        catch StudyError.duplicate {} catch { XCTFail("应返回可解释的重复错误：\(error)") }
+        do { _ = try await store.saveSemester(name: " 秋季 ",userID: scope.userID); XCTFail("重名应失败") }
+        catch StudyError.duplicate {} catch { XCTFail("应返回可解释的重复错误：\(error)") }
+    }
     func testScopeIsolationAndAtomicBatchRollback() async throws {
         let store = try StudyStore(path: ":memory:")
         let first = try await store.createUser(name: "甲", semester: "秋季")
