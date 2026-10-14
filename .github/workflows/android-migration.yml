@@ -2,7 +2,7 @@ name: Android Migration Adapter
 on:
   workflow_dispatch:
   push:
-    paths: ['app/**/Backup*.kt', 'app/**/SettingsViewModel.kt', 'app/**/SettingsScreen.kt', '.github/workflows/android-migration.yml']
+    paths: ['app/**/Backup*.kt', 'app/**/SettingsViewModel.kt', 'app/**/SettingsScreen.kt', 'gradle/**', 'gradle.properties', 'gradlew*', '.github/workflows/android-migration.yml']
 permissions:
   contents: read
 concurrency:
