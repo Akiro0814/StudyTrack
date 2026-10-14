@@ -119,7 +119,7 @@ struct ExamTrendCard: View {
         .chartXAxis {
             AxisMarks(values: xTicks) { value in
                 AxisTick()
-                AxisValueLabel { if let index = value.as(Double.self) { Text("第\(Int(index))次").font(.caption2) } }
+                AxisValueLabel(anchor: .top) { if let index = value.as(Double.self) { Text("\(Int(index))").font(.caption2).fixedSize() } }
             }
         }
         .chartYAxis {
