@@ -13,13 +13,18 @@ cp Package.resolved ../artifacts/Package.resolved
 while IFS= read -r device_type; do
   runtime="$(python3 -c 'import json; print(json.load(open("../artifacts/Toolchain.candidate.json"))["runtimeID"])')"
   udid="$(xcrun simctl create StudyTrack-CI "$device_type" "$runtime")"
-  cleanup() { xcrun simctl shutdown "$udid" || true; xcrun simctl delete "$udid" || true; }
+  cleanup() {
+    if [ -d "../artifacts/$udid.xcresult" ]; then
+      xcrun xcresulttool export attachments --path "../artifacts/$udid.xcresult" --output-path "../artifacts/screenshots-$udid" || true
+    fi
+    xcrun simctl shutdown "$udid" || true
+    xcrun simctl delete "$udid" || true
+  }
   trap cleanup EXIT
   xcrun simctl boot "$udid"
   xcrun simctl bootstatus "$udid" -b
-  xcodebuild test -onlyUsePackageVersionsFromResolvedFile -project StudyTrack.xcodeproj -scheme StudyTrack -destination "platform=iOS Simulator,id=$udid" -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 -test-timeouts-enabled YES -default-test-execution-time-allowance 90 -maximum-test-execution-time-allowance 180 -resultBundlePath "../artifacts/$udid.xcresult" -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO 2>&1 | tee "../artifacts/$udid-xcodebuild.log"
+  xcodebuild test -onlyUsePackageVersionsFromResolvedFile -clonedSourcePackagesDirPath .spm -project StudyTrack.xcodeproj -scheme StudyTrack -destination "platform=iOS Simulator,id=$udid" -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 -test-timeouts-enabled YES -default-test-execution-time-allowance 90 -maximum-test-execution-time-allowance 180 -resultBundlePath "../artifacts/$udid.xcresult" -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO 2>&1 | tee "../artifacts/$udid-xcodebuild.log"
   xcrun simctl io "$udid" screenshot "../artifacts/$udid.png"
-  xcrun xcresulttool export attachments --path "../artifacts/$udid.xcresult" --output-path "../artifacts/screenshots-$udid"
   cleanup
   trap - EXIT
 done < <(python3 -c 'import json,os; ids=json.load(open("../artifacts/Toolchain.candidate.json"))["deviceTypeIDs"]; selected=os.getenv("STUDYTRACK_DEVICE_TYPE"); assert not selected or selected in ids; print(selected if selected else "\n".join(ids))')

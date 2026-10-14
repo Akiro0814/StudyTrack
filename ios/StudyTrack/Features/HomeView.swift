@@ -3,23 +3,24 @@ import StudyTrackCore
 
 struct HomeView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var recording: RecordIntent?
     @State private var editing: Exam?
     var body: some View {
         StudyScroll {
-            HStack(spacing: 16) {
+            identityLayout {
                 NavigationLink { ProfileAppearanceView() } label: { AvatarView(size: 64) }
                     .buttonStyle(.plain).accessibilityLabel("编辑头像与个人资料").accessibilityIdentifier("home.avatar")
                 VStack(alignment: .leading,spacing: 6) {
-                    Text("今天，也向前一点。").font(.subheadline).foregroundStyle(.secondary)
+                    if !typeSize.isAccessibilitySize { Text("今天，也向前一点。").font(.subheadline).foregroundStyle(.secondary) }
                     Text(model.currentUser?.name ?? "同学").font(.largeTitle.bold()).lineLimit(2)
                 }
-                Spacer(minLength: 0)
+                if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
             }.padding(.vertical,8)
             VStack(alignment: .leading,spacing: 20) {
-                HStack {
+                informationLayout {
                     Label("学习进行时",systemImage: "sparkle").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    Spacer()
+                    if !typeSize.isAccessibilitySize { Spacer() }
                     NavigationLink { SemestersView() } label: {
                         HStack(spacing: 4) { Text(model.currentSemester?.name ?? "学期"); Image(systemName: "chevron.down").font(.caption2) }.font(.caption.weight(.medium))
                     }.accessibilityLabel("切换学期，\(model.currentSemester?.name ?? "")")
@@ -29,19 +30,19 @@ struct HomeView: View {
                         HStack(alignment: .center,spacing: 16) {
                             VStack(alignment: .leading,spacing: 4) {
                                 Text("最近一次 · \(subject.name)").font(.subheadline).foregroundStyle(.secondary)
-                                HStack(alignment: .firstTextBaseline,spacing: 6) {
+                                scoreLayout {
                                     Text(Score.text(latest.score)).font(.system(.largeTitle,design: .rounded,weight: .bold)).contentTransition(.numericText())
                                     Text("/ \(Score.text(subject.fullScore))").font(.subheadline).foregroundStyle(.secondary)
                                 }
                                 Text("\(latest.name.isEmpty ? latest.type.label : latest.name) · \(latest.date.description)").font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer(minLength: 0)
-                            ZStack {
+                            if !typeSize.isAccessibilitySize { ZStack {
                                 Circle().stroke(model.accent.opacity(0.12),lineWidth: 7)
                                 Circle().trim(from: 0,to: min(1,Double(latest.score)/Double(max(1,subject.fullScore))))
                                     .stroke(model.accent.gradient,style: StrokeStyle(lineWidth: 7,lineCap: .round)).rotationEffect(.degrees(-90))
                                 Text(Grade.classify(score: latest.score,full: subject.fullScore).rawValue).font(.title2.weight(.semibold))
-                            }.frame(width: 64,height: 64).accessibilityHidden(true)
+                            }.frame(width: 64,height: 64).accessibilityHidden(true) }
                         }.foregroundStyle(.primary).contentShape(Rectangle())
                     }.buttonStyle(.plain)
                 } else {
@@ -79,4 +80,7 @@ struct HomeView: View {
             .sensoryFeedback(.success,trigger: model.home.total)
             .sheet(item: $editing) { exam in if let scope = model.scope { ExamEditorView(scope: scope,existing: exam) } }
     }
+    var identityLayout: AnyLayout { typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading,spacing: 12)) : AnyLayout(HStackLayout(spacing: 16)) }
+    var informationLayout: AnyLayout { typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading,spacing: 12)) : AnyLayout(HStackLayout()) }
+    var scoreLayout: AnyLayout { typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading,spacing: 6)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline,spacing: 6)) }
 }

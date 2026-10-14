@@ -25,7 +25,6 @@ struct AnalysisView: View {
             } else if exams.isEmpty {
                 EmptyStudyView(title: "你的曲线，等待起笔",message: "记录考试后，在这里回看分数和排名的变化。",symbol: "chart.xyaxis.line",actionTitle: "记录成绩") { recording = .single }
             } else {
-                VStack(alignment: .leading,spacing: 14) { SectionHeading(title: "成绩概览",detail: "\(summary.count) 次考试"); SummaryView(summary: summary) }.studySurface()
                 ForEach(chosenSubjects) { subject in
                     let rows = exams.filter { $0.subjectID == subject.id }
                     if !rows.isEmpty {
@@ -42,6 +41,7 @@ struct AnalysisView: View {
                         }
                     }
                 }
+                VStack(alignment: .leading,spacing: 14) { SectionHeading(title: "成绩概览",detail: "\(summary.count) 次考试"); SummaryView(summary: summary) }.studySurface()
             }
         }.navigationTitle("分析").navigationBarTitleDisplayMode(.inline)
             .task(id: "\(subjectID)|\(model.dataRevision)") { await load() }
@@ -65,6 +65,7 @@ struct ExamTrendCard: View {
     let subject: Subject
     let exams: [Exam]
     @Environment(AppModel.self) private var model
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var metric = 0
     @State private var selectedPosition: Double?
     var selectedMetric: ExamTimeline.Metric { [.score,.classRank,.gradeRank,.districtRank][metric] }
@@ -130,6 +131,7 @@ struct ExamTrendCard: View {
     }
     var xTicks: [Double] {
         let count = exams.count
+        if typeSize.isAccessibilitySize && count > 1 { return [1,Double(count)] }
         if count <= 5 { return (1...max(1,count)).map(Double.init) }
         return [1,Double((count+1)/2),Double(count)]
     }

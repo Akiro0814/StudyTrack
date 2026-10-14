@@ -55,13 +55,13 @@ struct ProfilesView: View {
             } footer: { Text("关闭后仍保留已有档案，可重新开启。") }
             ForEach(model.users) { user in
                 Button {
-                    guard model.preferences.multiUserEnabled || user.id == model.preferences.currentUserID else { return }
+                    guard model.preferences.multiUserEnabled || user.id == model.preferences.currentUserID else { model.notice = "先开启上方的多用户模式，即可切换学习档案。"; return }
                     Task {
                         do { if let term = try await model.store?.semesters(userID: user.id).first { await model.switchScope(StudyScope(userID: user.id,semesterID: term.id)) } }
                         catch { model.error = model.friendly(error) }
                     }
                 } label: {
-                    HStack { VStack(alignment: .leading) { Text(user.name); Text(String(user.id.prefix(8))).font(.caption).foregroundStyle(.secondary) }; Spacer(); if user.id == model.preferences.currentUserID { Image(systemName: "checkmark") } }
+                    HStack { VStack(alignment: .leading,spacing: 6) { Text(user.name); Text(user.id == model.preferences.currentUserID ? "正在使用" : "轻点切换学习档案").font(.caption).foregroundStyle(.secondary) }; Spacer(); if user.id == model.preferences.currentUserID { Image(systemName: "checkmark.circle.fill") } }.padding(.vertical,6)
                 }.swipeActions {
                     Button("删除",role: .destructive) {
                         Task {
