@@ -38,7 +38,7 @@ final class AppModel {
         do {
             let base: URL
             #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-uitesting") {
+            if ProcessInfo.processInfo.arguments.contains(where: { $0.hasPrefix("-uitesting") }) {
                 base = FileManager.default.temporaryDirectory.appendingPathComponent("StudyTrack-UI-\(UUID().uuidString)")
             } else { base = try FileManager.default.url(for: .applicationSupportDirectory,in: .userDomainMask,appropriateFor: nil,create: true).appendingPathComponent("StudyTrack") }
             #else
@@ -47,6 +47,9 @@ final class AppModel {
             try FileManager.default.createDirectory(at: base,withIntermediateDirectories: true)
             store = try StudyStore(path: base.appendingPathComponent("studytrack.sqlite").path)
             files = FileService(root: base)
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-uitesting-showcase") { try await seedExperiencePreview() }
+            #endif
             try await reload(); ready = true
         } catch { self.error = "启动失败：\(friendly(error))" }
     }

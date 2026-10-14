@@ -5,6 +5,9 @@ import SwiftUI
     var body: some Scene {
         WindowGroup {
             RootView().environment(model).tint(model.accent).task { await model.start() }
+                #if DEBUG
+                .preferredColorScheme(ProcessInfo.processInfo.arguments.contains("-uitesting-dark") ? .dark : nil)
+                #endif
         }
     }
 }

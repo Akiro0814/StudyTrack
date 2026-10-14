@@ -19,6 +19,7 @@ while IFS= read -r device_type; do
   xcrun simctl bootstatus "$udid" -b
   xcodebuild test -onlyUsePackageVersionsFromResolvedFile -project StudyTrack.xcodeproj -scheme StudyTrack -destination "platform=iOS Simulator,id=$udid" -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 -test-timeouts-enabled YES -default-test-execution-time-allowance 90 -maximum-test-execution-time-allowance 180 -resultBundlePath "../artifacts/$udid.xcresult" -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO 2>&1 | tee "../artifacts/$udid-xcodebuild.log"
   xcrun simctl io "$udid" screenshot "../artifacts/$udid.png"
+  xcrun xcresulttool export attachments --path "../artifacts/$udid.xcresult" --output-path "../artifacts/screenshots-$udid"
   cleanup
   trap - EXIT
 done < <(python3 -c 'import json,os; ids=json.load(open("../artifacts/Toolchain.candidate.json"))["deviceTypeIDs"]; selected=os.getenv("STUDYTRACK_DEVICE_TYPE"); assert not selected or selected in ids; print(selected if selected else "\n".join(ids))')

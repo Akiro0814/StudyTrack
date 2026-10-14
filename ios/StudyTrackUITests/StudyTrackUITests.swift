@@ -1,6 +1,36 @@
 import XCTest
 
 final class StudyTrackUITests: XCTestCase {
+    @MainActor func testExperienceWithWallpaperAndSameDayExams() throws {
+        let app = XCUIApplication(); app.launchArguments = ["-uitesting-showcase"]; app.launch()
+        XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["home.avatar"].exists)
+        snapshot(app,"01-home-wallpaper")
+        app.tabBars.buttons["分析"].tap()
+        XCTAssertTrue(app.otherElements["analysis.chart"].waitForExistence(timeout: 10))
+        snapshot(app,"02-analysis-same-day")
+        app.segmentedControls.buttons["班排"].firstMatch.tap()
+        snapshot(app,"03-ranking-with-missing-value")
+        app.tabBars.buttons["设置"].tap()
+        XCTAssertTrue(app.otherElements["settings.brand"].waitForExistence(timeout: 5) || app.staticTexts["StudyTrack"].exists)
+        snapshot(app,"04-settings-brand")
+        app.buttons["settings.appearance"].tap()
+        XCTAssertTrue(app.otherElements["appearance.preview"].waitForExistence(timeout: 5))
+        snapshot(app,"05-personalization")
+    }
+    @MainActor func testDarkLargeTypeWithWallpaper() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uitesting-showcase","-uitesting-dark","-UIPreferredContentSizeCategoryName","UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+        XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["home.add"].isEnabled)
+        snapshot(app,"06-home-dark-accessibility-size")
+        app.tabBars.buttons["设置"].tap()
+        snapshot(app,"07-settings-dark-accessibility-size")
+    }
+    @MainActor private func snapshot(_ app: XCUIApplication,_ name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+    }
     @MainActor func testFirstRecordGuidesThroughSubjectAndContinuesToExam() throws {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting"]; app.launch()
         let name = app.textFields["onboarding.name"]
