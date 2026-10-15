@@ -27,6 +27,7 @@ final class ExperienceTests: XCTestCase {
     func testAvatarIsScopedPersistentAndIncludedInBackup() async throws {
         let store = try StudyStore(path: ":memory:")
         let first = try await store.createUser(name: "A",semester: "Fall")
+        var multi = try await store.preferences(); multi.multiUserEnabled = true; try await store.updatePreferences(multi)
         let second = try await store.createUser(name: "B",semester: "Fall")
         let bytes = Data("avatar-fixture".utf8)
         let id = UUID().uuidString.lowercased()

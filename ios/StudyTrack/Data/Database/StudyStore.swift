@@ -14,6 +14,18 @@ public actor StudyStore: ExamRepository {
             try db.execute(sql: "INSERT INTO app_metadata VALUES('dataset_id',?)", arguments: [Self.id()])
             try db.execute(sql: "INSERT INTO app_metadata VALUES('revision','0')")
         }
+        migrator.registerMigration("v2-school-system") { db in
+            try db.execute(sql: Self.schoolSchema)
+            for row in try Row.fetchAll(db, sql: "SELECT * FROM semesters ORDER BY created_at,id") {
+                if let term = SchoolTerm.recognize(row["name"]) {
+                    let occupied = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM semester_school WHERE user_id=? AND stage=? AND year=? AND half=?", arguments: [row["user_id"] as String,term.stage.rawValue,term.year,term.half]) ?? 0
+                    if occupied == 0 { try Self.setTerm(db,semesterID: row["id"],userID: row["user_id"],term: term) }
+                }
+            }
+            for row in try Row.fetchAll(db, sql: "SELECT * FROM subjects ORDER BY created_at,id") {
+                _ = try Self.lineage(db,subjectID: row["id"],userID: row["user_id"],semesterID: row["semester_id"],name: row["name"])
+            }
+        }
         try migrator.migrate(queue)
         try queue.write { db in
             var preferences = try Self.preferences(db)
@@ -60,17 +72,19 @@ public actor StudyStore: ExamRepository {
     }
     public func users() throws -> [User] { try queue.read { try Row.fetchAll($0, sql: "SELECT * FROM users ORDER BY created_at,id").map(Self.user) } }
     public func semesters(userID: String) throws -> [Semester] {
-        try queue.read { try Row.fetchAll($0, sql: "SELECT * FROM semesters WHERE user_id=? ORDER BY created_at,id", arguments: [userID]).map(Self.semester) }
+        try queue.read { db in try Row.fetchAll(db, sql: "SELECT * FROM semesters WHERE user_id=? ORDER BY created_at,id", arguments: [userID]).map { try Self.readSemester(db,$0) }.sorted { ($0.schoolTerm?.id ?? "z" + $0.name) < ($1.schoolTerm?.id ?? "z" + $1.name) } }
     }
     public func subjects(scope: StudyScope) throws -> [Subject] {
-        try queue.read { try Row.fetchAll($0, sql: "SELECT * FROM subjects WHERE user_id=? AND semester_id=? ORDER BY normalized_name,id", arguments: [scope.userID,scope.semesterID]).map(Self.subject) }
+        try queue.read { db in try Row.fetchAll(db, sql: "SELECT * FROM subjects WHERE user_id=? AND semester_id=? ORDER BY normalized_name,id", arguments: [scope.userID,scope.semesterID]).map { try Self.readSubject(db,$0) } }
     }
     public func createUser(name: String, semester: String) throws -> StudyScope {
         let name = try Self.name(name), semester = try Self.name(semester)
         return try queue.write { db in
+            guard try Self.preferences(db).multiUserEnabled || Int.fetchOne(db,sql: "SELECT COUNT(*) FROM users") == 0 else { throw StudyError.invalid("请先开启多用户模式。") }
             let u = Self.id(), s = Self.id(), now = Self.now()
             try db.execute(sql: "INSERT INTO users VALUES(?,?,?,?,?)", arguments: [u,name,normalize(name),now,now])
             try db.execute(sql: "INSERT INTO semesters VALUES(?,?,?,?,?,?)", arguments: [s,u,semester,normalize(semester),now,now])
+            if let term = SchoolTerm.recognize(semester) { try Self.setTerm(db,semesterID: s,userID: u,term: term) }
             var p = try Self.preferences(db); p.currentUserID = u; p.currentSemesterID = s
             try Self.writePreferences(db,p); try Self.bump(db)
             return StudyScope(userID: u,semesterID: s)
@@ -121,7 +135,9 @@ public actor StudyStore: ExamRepository {
     public func select(_ scope: StudyScope) throws {
         try queue.write { db in
             guard try Int.fetchOne(db,sql: "SELECT count(*) FROM semesters WHERE id=? AND user_id=?",arguments: [scope.semesterID,scope.userID]) == 1 else { throw StudyError.notFound }
-            var p = try Self.preferences(db); p.currentUserID = scope.userID; p.currentSemesterID = scope.semesterID
+            var p = try Self.preferences(db)
+            guard p.multiUserEnabled || p.currentUserID == scope.userID else { throw StudyError.invalid("请先开启多用户模式。") }
+            p.currentUserID = scope.userID; p.currentSemesterID = scope.semesterID
             try Self.writePreferences(db,p); try Self.bump(db)
         }
     }
@@ -140,7 +156,8 @@ public actor StudyStore: ExamRepository {
                 guard db.changesCount == 1 else { throw StudyError.notFound }
             }
             try Self.bump(db)
-            return Self.subject(try Row.fetchOne(db,sql: "SELECT * FROM subjects WHERE id=?",arguments: [key])!)
+            _ = try Self.lineage(db,subjectID: key,userID: scope.userID,semesterID: scope.semesterID,name: name)
+            return try Self.readSubject(db,Row.fetchOne(db,sql: "SELECT * FROM subjects WHERE id=?",arguments: [key])!)
         }
     }
     public func deleteSubject(id: String, scope: StudyScope) throws {
@@ -206,8 +223,8 @@ public actor StudyStore: ExamRepository {
     static func snapshot(_ db: Database) throws -> Snapshot {
         Snapshot(datasetID: try String.fetchOne(db,sql: "SELECT value FROM app_metadata WHERE key='dataset_id'")!,
                  users: try Row.fetchAll(db,sql: "SELECT * FROM users ORDER BY created_at,id").map(user),
-                 semesters: try Row.fetchAll(db,sql: "SELECT * FROM semesters ORDER BY created_at,id").map(semester),
-                 subjects: try Row.fetchAll(db,sql: "SELECT * FROM subjects ORDER BY id").map(subject),
+                 semesters: try Row.fetchAll(db,sql: "SELECT * FROM semesters ORDER BY created_at,id").map { try readSemester(db,$0) },
+                 subjects: try Row.fetchAll(db,sql: "SELECT * FROM subjects ORDER BY id").map { try readSubject(db,$0) },
                  exams: try Row.fetchAll(db,sql: "SELECT * FROM exam_records ORDER BY id").map(exam),
                  assets: try Row.fetchAll(db,sql: "SELECT * FROM assets ORDER BY id").map { Asset(id: $0["id"],relativePath: $0["relative_path"],mimeType: $0["mime_type"],sha256: $0["sha256"],byteCount: $0["byte_count"]) },
                  legacyIDMap: try Row.fetchAll(db,sql: "SELECT * FROM legacy_id_map ORDER BY source_dataset_id,entity_type,legacy_id").map { LegacyID(sourceDatasetID: $0["source_dataset_id"],entityType: $0["entity_type"],legacyID: $0["legacy_id"],canonicalID: $0["canonical_id"]) },preferences: try preferences(db))
@@ -215,7 +232,17 @@ public actor StudyStore: ExamRepository {
     static func insertSnapshot(_ db: Database, _ s: Snapshot) throws {
         for x in s.users { try db.execute(sql: "INSERT INTO users VALUES(?,?,?,?,?)",arguments: [x.id,try name(x.name),normalize(x.name),x.createdAt,x.updatedAt]) }
         for x in s.semesters { try db.execute(sql: "INSERT INTO semesters VALUES(?,?,?,?,?,?)",arguments: [x.id,x.userID,try name(x.name),normalize(x.name),x.createdAt,x.updatedAt]) }
-        for x in s.subjects { try db.execute(sql: "INSERT INTO subjects VALUES(?,?,?,?,?,?,?,?)",arguments: [x.id,x.userID,x.semesterID,try name(x.name),normalize(x.name),x.fullScore,x.createdAt,x.updatedAt]) }
+        for x in s.semesters {
+            if let term = x.schoolTerm { try setTerm(db,semesterID: x.id,userID: x.userID,term: term) }
+            else if let term = SchoolTerm.recognize(x.name), try Int.fetchOne(db,sql: "SELECT COUNT(*) FROM semester_school WHERE user_id=? AND stage=? AND year=? AND half=?",arguments: [x.userID,term.stage.rawValue,term.year,term.half]) == 0 { try setTerm(db,semesterID: x.id,userID: x.userID,term: term) }
+        }
+        for x in s.subjects {
+            try db.execute(sql: "INSERT INTO subjects VALUES(?,?,?,?,?,?,?,?)",arguments: [x.id,x.userID,x.semesterID,try name(x.name),normalize(x.name),x.fullScore,x.createdAt,x.updatedAt])
+            if let lineage = x.lineageID {
+                guard UUID(uuidString: lineage) != nil else { throw StudyError.corrupt("科目标识无效。") }
+                try db.execute(sql: "INSERT INTO subject_lineage VALUES(?,?)",arguments: [x.id,lineage])
+            } else { _ = try Self.lineage(db,subjectID: x.id,userID: x.userID,semesterID: x.semesterID,name: x.name) }
+        }
         for x in s.assets { try db.execute(sql: "INSERT INTO assets VALUES(?,?,?,?,?)",arguments: [x.id,x.relativePath,x.mimeType,x.sha256,x.byteCount]) }
         for x in s.exams {
             guard x.name.count <= 100, (x.reflection?.count ?? 0) <= 10_000 else { throw StudyError.corrupt("名称/反思超出长度限制。") }
@@ -225,7 +252,7 @@ public actor StudyStore: ExamRepository {
     }
     public static func validateSnapshot(_ s: Snapshot) throws {
         guard !s.users.isEmpty, s.preferences.nameNormalizationVersion == 1,
-              ["simple","glass"].contains(s.preferences.theme), ["blue","green","orange","purple"].contains(s.preferences.accent),
+              ["simple","glass"].contains(s.preferences.theme), (RGBColor.parse(s.preferences.accent) != nil || ["blue","green","orange","purple"].contains(s.preferences.accent)),
               s.users.allSatisfy({ u in s.semesters.contains { $0.userID == u.id } }) else { throw StudyError.corrupt("用户、学期或设置无效。") }
         let ids = s.users.map(\.id) + s.semesters.map(\.id) + s.subjects.map(\.id) + s.exams.map(\.id) + s.assets.map(\.id) + [s.datasetID]
         guard ids.allSatisfy({ UUID(uuidString: $0) != nil && $0 == $0.lowercased() }) else { throw StudyError.corrupt("备份主键须为小写 UUID。") }
@@ -245,6 +272,7 @@ public actor StudyStore: ExamRepository {
         let q = try DatabaseQueue(configuration: config)
         try q.write { db in
             try db.execute(sql: String(contentsOf: Bundle.module.url(forResource: "schema",withExtension: "sql")!,encoding: .utf8))
+            try db.execute(sql: schoolSchema)
             try insertSnapshot(db,s)
         }
     }

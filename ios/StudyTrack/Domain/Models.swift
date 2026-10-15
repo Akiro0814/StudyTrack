@@ -103,10 +103,12 @@ public struct User: Identifiable, Codable, Hashable, Sendable {
 }
 public struct Semester: Identifiable, Codable, Hashable, Sendable {
     public var id: String; public var userID: String; public var name: String; public var createdAt: String; public var updatedAt: String
+    public var schoolTerm: SchoolTerm? = nil
 }
 public struct Subject: Identifiable, Codable, Hashable, Sendable {
     public var id: String; public var userID: String; public var semesterID: String; public var name: String
     public var fullScore: Int64; public var createdAt: String; public var updatedAt: String
+    public var lineageID: String? = nil
 }
 public struct Exam: Identifiable, Codable, Hashable, Sendable {
     public var id: String; public var userID: String; public var semesterID: String; public var subjectID: String

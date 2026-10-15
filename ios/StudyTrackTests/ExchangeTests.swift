@@ -30,6 +30,7 @@ final class ExchangeTests: XCTestCase {
         let data = try BackupCodec.encode(snapshot, resources: [:])
         let verified = try BackupCodec.decode(data)
         XCTAssertEqual(verified.snapshot.users.count, 1)
+        var multi = try await store.preferences(); multi.multiUserEnabled = true; try await store.updatePreferences(multi)
         _ = try await store.createUser(name: "乙", semester: "春季")
         try await store.restore(verified.snapshot)
         let restored = try await store.snapshot()

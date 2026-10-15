@@ -15,6 +15,20 @@ final class AppModel {
     var semesters: [Semester] = []
     var subjects: [Subject] = []
     var home = ExamPage.empty
+    var homeAnalysis = AnalysisData()
+    var recentlyDeleted: Exam?
+    var analysisRoute: WidgetAnalysisRoute?
+    func deleteRecord(_ exam: Exam) async {
+        guard let store, let current = scope, current.userID == exam.userID else { return }
+        if await perform({
+            guard scope == current else { throw StudyError.scopeChanged }
+            try await store.deleteExam(id: exam.id,scope: StudyScope(userID: exam.userID,semesterID: exam.semesterID))
+        }) { recentlyDeleted = exam }
+    }
+    func undoDeletion() async {
+        guard let exam = recentlyDeleted, exam.userID == scope?.userID else { recentlyDeleted = nil; return }
+        if await perform({ try await store?.restoreExam(exam) }) { recentlyDeleted = nil }
+    }
     var scope: StudyScope? { preferences.scope }
     var currentUser: User? { users.first { $0.id == preferences.currentUserID } }
     var currentSemester: Semester? { semesters.first { $0.id == preferences.currentSemesterID } }
@@ -26,11 +40,12 @@ final class AppModel {
     private var loadedWallpaperID: String?
     private var loadedWallpaperRevision = -1
     var accent: Color {
+        if let rgb = RGBColor.parse(preferences.accent) { return Color(red: Double(rgb.red)/255,green: Double(rgb.green)/255,blue: Double(rgb.blue)/255) }
         switch preferences.accent {
-        case "green": Color(red: 0.10,green: 0.56,blue: 0.44)
-        case "orange": Color(red: 0.88,green: 0.32,blue: 0.24)
-        case "purple": Color(red: 0.61,green: 0.36,blue: 0.82)
-        default: Color(red: 0.29,green: 0.40,blue: 0.91)
+        case "green": return Color(red: 0.10,green: 0.56,blue: 0.44)
+        case "orange": return Color(red: 0.88,green: 0.32,blue: 0.24)
+        case "purple": return Color(red: 0.61,green: 0.36,blue: 0.82)
+        default: return Color(red: 0.29,green: 0.40,blue: 0.91)
         }
     }
     func start() async {
@@ -65,6 +80,7 @@ final class AppModel {
         }
         guard revision == selectionRevision else { return }
         preferences = p; users = u; semesters = terms; subjects = subs; home = page
+        if let scope = p.scope { homeAnalysis = try await store.analysis(scope: scope,wholeStage: false) }
         dataRevision = try await store.revision()
         let avatarID = p.currentUserID.flatMap { p.avatarAssetID(for: $0) }
         if p.wallpaperAssetID != loadedWallpaperID || avatarID != loadedAvatarID || loadedWallpaperRevision != selectionRevision {
@@ -80,6 +96,7 @@ final class AppModel {
             loadedWallpaperID = p.wallpaperAssetID
             loadedWallpaperRevision = selectionRevision
         }
+        await publishWidgets()
     }
     @discardableResult func perform(onError: ((String) -> Void)? = nil, _ action: () async throws -> Void) async -> Bool {
         guard !busy else { return false }; busy = true; defer { busy = false }
@@ -89,6 +106,7 @@ final class AppModel {
     func switchScope(_ target: StudyScope) async {
         _ = await perform {
             guard let store else { return }; try await store.select(target); selectionRevision += 1
+            recentlyDeleted = nil
         }
     }
     func savePreferences(_ value: Preferences) async {

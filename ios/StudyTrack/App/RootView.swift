@@ -17,14 +17,22 @@ struct RootView: View {
                 TabView(selection: $selectedTab) {
                     Tab("首页",systemImage: "house",value: 0) { AppNavigation { HomeView() } }
                     Tab("科目",systemImage: "books.vertical",value: 1) { AppNavigation { SubjectsView() } }
-                    Tab("成绩",systemImage: "list.bullet.rectangle",value: 2) { AppNavigation { ExamsView() } }
-                    Tab("分析",systemImage: "chart.xyaxis.line",value: 3) { AppNavigation { AnalysisView() } }
+                    Tab("成绩分析",systemImage: "chart.xyaxis.line",value: 2) { AppNavigation { AnalysisView() } }
                     Tab("设置",systemImage: "gearshape",value: 4) { AppNavigation { SettingsView() } }
                 }.id(model.selectionRevision)
                     .background { AppCanvas() }
             }
         }
         .disabled(model.busy)
+        .onOpenURL { url in Task { await model.openWidget(url) } }
+        .onChange(of: model.analysisRoute) { _,value in if value != nil { selectedTab = 2 } }
+        .preferredColorScheme(model.preferences.displayMode == "light" ? .light : model.preferences.displayMode == "dark" ? .dark : nil)
+        .safeAreaInset(edge: .bottom) {
+            if model.recentlyDeleted != nil {
+                HStack { Text("已删除成绩"); Spacer(); Button("撤销") { Task { await model.undoDeletion() } }; Button("关闭",systemImage: "xmark") { model.recentlyDeleted = nil }.labelStyle(.iconOnly) }
+                    .font(.subheadline).padding().background(.regularMaterial,in: Capsule()).padding(.horizontal)
+            }
+        }
         .overlay { if model.busy { ProgressView().padding(24).background(.regularMaterial,in: RoundedRectangle(cornerRadius: 18)) } }
         .alert(model.error != nil ? "操作未完成" : "学迹",isPresented: Binding(get: { model.error != nil || model.notice != nil },set: { if !$0 { model.error = nil; model.notice = nil } })) {
             Button("好",role: .cancel) { model.error = nil; model.notice = nil }

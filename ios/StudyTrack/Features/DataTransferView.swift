@@ -4,6 +4,7 @@ import StudyTrackCore
 
 extension UTType {
     static var studytrackBackup: UTType { UTType(exportedAs: "com.repea.studytrack.ios.backup",conformingTo: .zip) }
+    static var studytrackXLSX: UTType { UTType(importedAs: "org.openxmlformats.spreadsheetml.sheet",conformingTo: .zip) }
 }
 private struct ShareFile: Identifiable { let id = UUID(); let url: URL }
 struct DataTransferView: View {
@@ -18,6 +19,10 @@ struct DataTransferView: View {
     @State private var conversions = false
     @State private var share: ShareFile?
     @State private var confirmRestore = false
+    @State private var pendingWorkbook: ParsedWorkbook?
+    @State private var pendingDigest = ""
+    @State private var termMappings: [String: SchoolTerm] = [:]
+    @State private var mapping = false
     var body: some View {
         List {
             Section("Excel 成绩交换") {
@@ -26,6 +31,7 @@ struct DataTransferView: View {
                 Text("支持普通未加密 .xlsx；旧 .xls 请先转换。必需列：科目、时间、分数。日期文本使用 YYYY-MM-DD，最多 10000 行。").font(.caption).foregroundStyle(.secondary)
             }
             Section("完整备份") {
+                NavigationLink("iCloud 云备份与恢复") { CloudBackupView() }
                 Button("导出全部用户与学期",systemImage: "externaldrive.badge.plus") { Task { await exportBackup() } }
                 Button("检查并恢复完整备份",systemImage: "arrow.counterclockwise") { restoring = true; choosing = true }
                 Button("检查上次替换前的本机快照") {
@@ -69,13 +75,26 @@ struct DataTransferView: View {
                 }
             }
         }.studyCanvas().navigationTitle("数据与备份").navigationBarTitleDisplayMode(.inline)
-            .fileImporter(isPresented: $choosing,allowedContentTypes: restoring ? [.studytrackBackup,.zip,.data] : [UTType(filenameExtension: "xlsx") ?? .data],allowsMultipleSelection: false) { result in
+            .fileImporter(isPresented: $choosing,allowedContentTypes: restoring ? [.studytrackBackup,.zip,.data] : [.studytrackXLSX,.zip,.data,.item],allowsMultipleSelection: false) { result in
                 switch result {
                 case .success(let urls): if let file = urls.first { Task { await inspect(file) } }
                 case .failure(let error): if (error as NSError).code != NSUserCancelledError { model.error = "文件未能打开，请等待下载完成后重试。" }
                 }
             }
             .sheet(item: $share) { file in ShareSheet(url: file.url) }
+            .sheet(isPresented: $mapping) {
+                NavigationStack {
+                    Form {
+                        Text("将表格中的学期对应到标准学期后继续预览。原始文件不变。")
+                        ForEach(termMappings.keys.sorted(),id: \.self) { name in
+                            Section(name) { SchoolTermPicker(term: Binding(get: { termMappings[name]! },set: { termMappings[name] = $0 })) }
+                        }
+                    }.navigationTitle("对应历史学期").toolbar {
+                        ToolbarItem(placement: .cancellationAction) { Button("取消") { mapping = false; pendingWorkbook = nil } }
+                        ToolbarItem(placement: .confirmationAction) { Button("继续预览") { Task { await applyMappings() } } }
+                    }
+                }
+            }
             .confirmationDialog("确认替换本机全部数据？此操作会清理草稿。",isPresented: $confirmRestore,titleVisibility: .visible) {
                 Button("确认替换",role: .destructive) { Task { await restore() } }
             }
@@ -91,9 +110,20 @@ struct DataTransferView: View {
             } else {
                 guard url.pathExtension.lowercased() == "xlsx" else { throw StudyError.unsupported("请先将文件转换为 .xlsx。") }
                 let parsed = try await Task.detached { try XLSXCodec.decode(data) }.value
-                plan = try await store.previewImport(parsed,scope: scope,fileDigest: SafeArchive.sha256(data)); backup = nil; validOnly = false; conversions = false
+                let existing = try await store.semesters(userID: scope.userID)
+                let unknown = Set(parsed.rows.map(\.semester).filter { !$0.isEmpty && SchoolTerm.recognize($0) == nil && !existing.contains(where: { term in term.name == $0 }) })
+                pendingDigest = SafeArchive.sha256(data)
+                if !unknown.isEmpty {
+                    pendingWorkbook = parsed; termMappings = Dictionary(uniqueKeysWithValues: unknown.map { ($0,model.currentSemester?.schoolTerm ?? SchoolTerm(stage: .high,year: 1,half: 1)) }); mapping = true
+                } else { plan = try await store.previewImport(parsed,scope: scope,fileDigest: pendingDigest) }
+                backup = nil; validOnly = false; conversions = false
             }
         }
+    }
+    func applyMappings() async {
+        guard var parsed = pendingWorkbook,let scope = model.scope else { return }
+        for index in parsed.rows.indices { if let term = termMappings[parsed.rows[index].semester] { parsed.rows[index].semester = term.label } }
+        if await model.perform({ plan = try await model.store?.previewImport(parsed,scope: scope,fileDigest: pendingDigest) }) { mapping = false; pendingWorkbook = nil }
     }
     func commit(_ plan: ImportPlan) async {
         if await model.perform({ report = try await model.store?.commitImport(plan,validRowsOnly: validOnly,acceptConversions: conversions) }) { self.plan = nil }

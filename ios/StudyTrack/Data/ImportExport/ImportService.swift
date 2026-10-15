@@ -70,12 +70,14 @@ extension StudyStore {
                 else {
                     semesterID = Self.id(); let now = Self.now()
                     try db.execute(sql: "INSERT INTO semesters VALUES(?,?,?,?,?,?)",arguments: [semesterID,plan.scope.userID,row.semester,normalize(row.semester),now,now])
+                    if let term = SchoolTerm.recognize(row.semester) { try Self.setTerm(db,semesterID: semesterID,userID: plan.scope.userID,term: term) }
                 }
                 let subjectID: String
                 if let id = try String.fetchOne(db,sql: "SELECT id FROM subjects WHERE user_id=? AND semester_id=? AND normalized_name=?",arguments: [plan.scope.userID,semesterID,normalize(row.subject)]) { subjectID = id }
                 else {
                     subjectID = Self.id(); let now = Self.now()
                     try db.execute(sql: "INSERT INTO subjects VALUES(?,?,?,?,?,?,?,?)",arguments: [subjectID,plan.scope.userID,semesterID,row.subject,normalize(row.subject),row.fullScore ?? 10000,now,now])
+                    _ = try Self.lineage(db,subjectID: subjectID,userID: plan.scope.userID,semesterID: semesterID,name: row.subject)
                 }
                 _ = try Self.saveExam(db,ExamInput(subjectID: subjectID,name: row.name,date: row.date,score: row.score,type: row.type,classRank: row.classRank,gradeRank: row.gradeRank,districtRank: row.districtRank,reflection: row.reflection),scope: StudyScope(userID: plan.scope.userID,semesterID: semesterID),preserveEmptyName: true)
             }

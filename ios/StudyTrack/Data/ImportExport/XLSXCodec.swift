@@ -16,7 +16,10 @@ public struct ImportIssue: Codable, Identifiable, Sendable {
     public var id: String { "\(row)-\(reason)" }; public var row: Int; public var reason: String; public var warning: Bool
     public init(row: Int, reason: String, warning: Bool = false) { self.row = row; self.reason = reason; self.warning = warning }
 }
-public struct ParsedWorkbook: Sendable { public var rows: [ExchangeRow]; public var issues: [ImportIssue] }
+public struct ParsedWorkbook: Sendable {
+    public var rows: [ExchangeRow]; public var issues: [ImportIssue]
+    public init(rows: [ExchangeRow],issues: [ImportIssue]) { self.rows = rows; self.issues = issues }
+}
 
 private final class XMLNode {
     let name: String; let attributes: [String: String]; var text = ""; var children: [XMLNode] = []

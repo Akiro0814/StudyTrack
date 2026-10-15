@@ -64,6 +64,7 @@ final class ImportTests: XCTestCase {
     func testUserDeletionRepairsSelectionAndLastUserCannotBeDeleted() async throws {
         let store = try StudyStore(path: ":memory:")
         let first = try await store.createUser(name: "甲",semester: "秋季")
+        var multi = try await store.preferences(); multi.multiUserEnabled = true; try await store.updatePreferences(multi)
         let second = try await store.createUser(name: "乙",semester: "秋季")
         try await store.deleteUser(id: second.userID)
         let preferences = try await store.preferences(); XCTAssertEqual(preferences.scope,first)

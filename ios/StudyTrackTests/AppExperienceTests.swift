@@ -27,6 +27,7 @@ final class AppExperienceTests: XCTestCase {
         XCTAssertNotNil(model.wallpaper); XCTAssertNotNil(model.avatar)
         p.theme = "glass"; try await store.updatePreferences(p); try await model.reload()
         XCTAssertNotNil(model.wallpaper)
+        var multi = try await store.preferences(); multi.multiUserEnabled = true; try await store.updatePreferences(multi)
         let second = try await store.createUser(name: "B",semester: "Fall")
         model.selectionRevision += 1; try await model.reload()
         XCTAssertEqual(model.scope,second); XCTAssertNil(model.avatar); XCTAssertNotNil(model.wallpaper)

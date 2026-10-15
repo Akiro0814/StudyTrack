@@ -13,28 +13,24 @@ struct PersonalizationView: View {
                 Text("让学迹，更像你。").font(.title2.bold())
                 Text("你喜欢的颜色、照片和阅读方式。").font(.subheadline).foregroundStyle(.secondary)
             }
-            ZStack(alignment: .bottomLeading) {
-                AppCanvas()
-                VStack(alignment: .leading,spacing: 14) {
-                    Text("你的学习空间").font(.caption.weight(.medium)).foregroundStyle(.secondary)
-                    HStack(spacing: 12) { AvatarView(size: 44); Text(model.currentUser?.name ?? "学迹").font(.title3.bold()); Spacer(); Image(systemName: "sparkle").foregroundStyle(.tint) }
-                    Text("每一次记录，都值得被看见。").font(.subheadline).foregroundStyle(.secondary)
-                }.studySurface().padding(16)
-            }.frame(minHeight: typeSize.isAccessibilitySize ? 420 : 240).clipShape(RoundedRectangle(cornerRadius: 28)).accessibilityElement(children: .contain).accessibilityIdentifier("appearance.preview")
             VStack(alignment: .leading,spacing: 16) {
                 SectionHeading(title: "内容质感")
                 HStack(spacing: 12) {
-                    theme("留白",subtitle: "清晰 · 专注",symbol: "rectangle",value: "simple")
-                    theme("通透",subtitle: "轻盈 · 原生玻璃",symbol: "square.on.square",value: "glass")
+                    theme("默认",subtitle: "柔和 · 高斯模糊",symbol: "rectangle",value: "simple")
+                    theme("液态玻璃",subtitle: "流动 · 原生玻璃",symbol: "square.on.square",value: "glass")
                 }
-                Text("深浅色跟随系统。两种质感均可显示自选壁纸。").font(.caption).foregroundStyle(.secondary)
+                if model.preferences.theme == "glass" { NavigationLink("液态玻璃材质调节") { GlassSettingsView() } }
+                Picker("显示模式",selection: Binding(get: { model.preferences.displayMode },set: { value in var p = model.preferences; p.displayMode = value; Task { await model.savePreferences(p) } })) {
+                    Text("亮色模式").tag("light"); Text("暗色模式").tag("dark"); Text("跟随系统").tag("system")
+                }.pickerStyle(.menu).accessibilityIdentifier("appearance.mode")
             }.studySurface()
             VStack(alignment: .leading,spacing: 20) {
-                SectionHeading(title: "点睛的颜色")
+                SectionHeading(title: "主题色")
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 16) { colors }
                     VStack(alignment: .leading,spacing: 16) { colors }
                 }
+                NavigationLink("自定义主题色") { ThemeColorEditor() }
             }.studySurface()
             VStack(alignment: .leading,spacing: 16) {
                 SectionHeading(title: "一张喜欢的壁纸")

@@ -14,6 +14,7 @@ final class RepositoryTests: XCTestCase {
     func testScopeIsolationAndAtomicBatchRollback() async throws {
         let store = try StudyStore(path: ":memory:")
         let first = try await store.createUser(name: "甲", semester: "秋季")
+        var multi = try await store.preferences(); multi.multiUserEnabled = true; try await store.updatePreferences(multi)
         let second = try await store.createUser(name: "乙", semester: "秋季")
         let subject = try await store.saveSubject(id: nil, name: "数学", fullScore: 10000, scope: first)
         let date = try LocalDate("2026-10-12")

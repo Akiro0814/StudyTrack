@@ -35,6 +35,9 @@ struct SettingsView: View {
             VStack(spacing: 8) {
                 Label("只属于你的本地学习空间",systemImage: "lock.shield").font(.caption)
                 Text(AppVersion.text).font(.caption2)
+                Text("作者 L1angK1NG").font(.caption)
+                Link("GitHub · L1angK1NG",destination: URL(string: "https://github.com/L1angK1NG")!)
+                Link("ljb110814@163.com",destination: URL(string: "mailto:ljb110814@163.com")!)
             }.foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical,8)
         }.navigationTitle("设置").navigationBarTitleDisplayMode(.inline)
     }
@@ -75,12 +78,8 @@ struct ProfilesView: View {
                 }
             }
         }.studyCanvas().navigationTitle("用户管理").navigationBarTitleDisplayMode(.inline)
-            .toolbar { Button("添加用户",systemImage: "plus") { name = ""; semester = ""; adding = true } }
-            .alert("添加用户",isPresented: $adding) {
-                TextField("姓名",text: $name); TextField("初始学期",text: $semester)
-                Button("添加") { Task { _ = await model.perform { _ = try await model.store?.createUser(name: name,semester: semester); model.selectionRevision += 1 } } }
-                Button("取消",role: .cancel) {}
-            }
+            .toolbar { if model.preferences.multiUserEnabled { Button("添加用户",systemImage: "plus") { adding = true } } }
+            .sheet(isPresented: $adding) { NavigationStack { ProfileSetupForm().toolbar { ToolbarItem(placement: .cancellationAction) { Button("取消") { adding = false } } } } }
             .alert("重命名用户",isPresented: Binding(get: { renaming != nil },set: { if !$0 { renaming = nil } })) {
                 TextField("姓名",text: $name)
                 Button("保存") { if let user = renaming { Task { _ = await model.perform { try await model.store?.renameUser(id: user.id,name: name) } } }; renaming = nil }
@@ -94,28 +93,38 @@ struct ProfilesView: View {
 
 struct SemestersView: View {
     @Environment(AppModel.self) private var model
-    @State private var name = ""
+    @State private var term = SchoolTerm(stage: .high,year: 1,half: 1)
     @State private var editing: Semester?
     @State private var editor = false
     @State private var deleting: Semester?
+    @State private var failure: String?
     var body: some View {
-        List(model.semesters) { term in
-            Button { Task { await model.switchScope(StudyScope(userID: term.userID,semesterID: term.id)) } } label: {
-                HStack { Text(term.name); Spacer(); if term.id == model.preferences.currentSemesterID { Image(systemName: "checkmark") } }
+        List(model.semesters) { semester in
+            Button { Task { await model.switchScope(StudyScope(userID: semester.userID,semesterID: semester.id)) } } label: {
+                HStack {
+                    VStack(alignment: .leading,spacing: 5) { Text(semester.name); Text(semester.schoolTerm?.stage.label ?? "待归类 · 不计入阶段汇总").font(.caption).foregroundStyle(.secondary) }
+                    Spacer(); if semester.id == model.preferences.currentSemesterID { Image(systemName: "checkmark") }
+                }
             }.swipeActions {
-                Button("删除",role: .destructive) { deleting = term }
-                Button("重命名") { editing = term; name = term.name; editor = true }.tint(.blue)
+                Button("删除",role: .destructive) { deleting = semester }
+                if semester.schoolTerm == nil { Button("归类") { editing = semester; failure = nil; editor = true }.tint(.blue) }
             }
         }.studyCanvas().navigationTitle("学期管理").navigationBarTitleDisplayMode(.inline)
-            .toolbar { Button("添加学期",systemImage: "plus") { editing = nil; name = ""; editor = true } }
-            .alert(editing == nil ? "添加学期" : "重命名学期",isPresented: $editor) {
-                TextField("学期名称",text: $name)
-                Button("保存") {
-                    guard let userID = model.preferences.currentUserID else { return }
-                    let id = editing?.id
-                    Task { _ = await model.perform { _ = try await model.store?.saveSemester(id: id,name: name,userID: userID) } }
+            .toolbar { Button("添加学期",systemImage: "plus") { editing = nil; failure = nil; term = model.currentSemester?.schoolTerm ?? term; editor = true } }
+            .sheet(isPresented: $editor) {
+                NavigationStack {
+                    Form {
+                        Section { SchoolTermPicker(term: $term) } footer: { Text(editing == nil ? "自动继承同阶段最近学期的科目与满分，成绩独立保存。" : "保留原学期全部科目和成绩；不会与已有学期合并。") }
+                        InlineError(message: failure)
+                    }.navigationTitle(editing == nil ? "添加学期" : "归类旧学期")
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) { Button("取消") { editor = false } }
+                            ToolbarItem(placement: .confirmationAction) { Button("保存") {
+                                guard let userID = model.preferences.currentUserID else { return }
+                                Task { if await model.perform(onError: { failure = $0 }, { _ = try await model.store?.saveSchoolSemester(id: editing?.id,term: term,userID: userID) }) { editor = false } }
+                            } }
+                        }
                 }
-                Button("取消",role: .cancel) {}
             }
             .confirmationDialog("删除学期？仅允许删除非当前且没有科目的学期。",isPresented: Binding(get: { deleting != nil },set: { if !$0 { deleting = nil } }),titleVisibility: .visible) {
                 Button("删除学期",role: .destructive) { if let term = deleting { Task { _ = await model.perform { try await model.store?.deleteSemester(id: term.id,userID: term.userID) } } }; deleting = nil }

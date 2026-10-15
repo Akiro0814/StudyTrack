@@ -29,7 +29,11 @@ struct StudyScroll<Content: View>: View {
                 .frame(maxWidth: 720).padding(.horizontal,20).padding(.top,12).padding(.bottom,28)
                 .frame(maxWidth: .infinity)
         }.background { AppCanvas() }.scrollDismissesKeyboard(.interactively)
+            .overlay(alignment: .top) { ProgressiveTopBlur() }
+            .environment(\.colorScheme,model.wallpaper.map { $0.prefersLightText ? .dark : .light } ?? scheme)
     }
+    @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var scheme
 }
 
 struct StudySurface: ViewModifier {
@@ -39,7 +43,10 @@ struct StudySurface: ViewModifier {
         content.padding(20).frame(maxWidth: .infinity,alignment: .leading)
             .background {
                 let shape = RoundedRectangle(cornerRadius: 26,style: .continuous)
-                if !solid && (model.wallpaper != nil || model.preferences.theme == "glass") {
+                if !solid && model.preferences.theme == "glass" {
+                    shape.fill(Color(uiColor: .systemBackground).opacity(model.preferences.glassBacking))
+                        .glassEffect((model.preferences.glassVariant == "clear" ? Glass.clear : Glass.regular).tint(model.accent.opacity(model.preferences.glassTint)),in: shape)
+                } else if !solid {
                     shape.fill(.regularMaterial)
                 } else { shape.fill(Color(uiColor: .secondarySystemGroupedBackground)) }
             }
@@ -48,7 +55,7 @@ struct StudySurface: ViewModifier {
 }
 extension View {
     func studySurface() -> some View { modifier(StudySurface()) }
-    func studyCanvas() -> some View { scrollContentBackground(.hidden).background { AppCanvas() }.scrollDismissesKeyboard(.interactively) }
+    func studyCanvas() -> some View { scrollContentBackground(.hidden).background { AppCanvas() }.scrollDismissesKeyboard(.interactively).overlay(alignment: .top) { ProgressiveTopBlur() } }
 }
 
 struct BrandMark: View {

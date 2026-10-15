@@ -4,61 +4,122 @@ import StudyTrackCore
 
 struct AnalysisView: View {
     @Environment(AppModel.self) private var model
-    @State private var subjectID = ""
-    @State private var exams: [Exam] = []
-    @State private var summary = ExamSummary()
+    @State private var data = AnalysisData()
+    @State private var wholeStage = false
+    @State private var groupID = ""
+    @State private var search = ""
     @State private var loading = false
     @State private var failure: String?
     @State private var recording: RecordIntent?
     @State private var editing: Exam?
-    var chosenSubjects: [Subject] { model.subjects.filter { subjectID.isEmpty || $0.id == subjectID } }
+    @State private var visibleCounts: [String: Int] = [:]
+    var groups: [AnalysisGroup] { data.groups.filter { groupID.isEmpty || $0.id == groupID } }
+    var queryKey: String { "\(wholeStage)|\(model.dataRevision)|\(model.selectionRevision)" }
     var body: some View {
         StudyScroll {
-            VStack(alignment: .leading,spacing: 8) {
+            VStack(alignment: .leading,spacing: 10) {
                 Text("看见每一步变化。").font(.title2.bold())
-                Text("每场考试独立呈现，同一天也不重叠。").font(.subheadline).foregroundStyle(.secondary)
+                Picker("分析范围",selection: $wholeStage) { Text("本学期").tag(false); Text("学习阶段汇总").tag(true) }.pickerStyle(.segmented)
+                Text(wholeStage ? (model.currentSemester?.schoolTerm?.stage.label ?? "请先归类当前学期") + " · 全部已建学期" : model.currentSemester?.name ?? "本学期").font(.caption).foregroundStyle(.secondary)
+                Picker("科目",selection: $groupID) {
+                    Text("全部科目").tag("")
+                    ForEach(data.groups) { Text($0.subject.name + " · " + Score.text($0.subject.fullScore) + "分制").tag($0.id) }
+                }.pickerStyle(.menu)
             }
-            SubjectFilter(selection: $subjectID)
-            if loading { ProgressView("正在整理成绩").frame(maxWidth: .infinity) }
-            else if let failure {
-                EmptyStudyView(title: "暂时无法读取",message: failure,symbol: "arrow.clockwise",actionTitle: "重试") { Task { await load() } }
-            } else if exams.isEmpty {
-                EmptyStudyView(title: "你的曲线，等待起笔",message: "记录考试后，在这里回看分数和排名的变化。",symbol: "chart.xyaxis.line",actionTitle: "记录成绩") { recording = .single }
-            } else {
-                ForEach(chosenSubjects) { subject in
-                    let rows = exams.filter { $0.subjectID == subject.id }
-                    if !rows.isEmpty {
-                        VStack(alignment: .leading,spacing: 16) {
-                            SectionHeading(title: subject.name,detail: "满分 \(Score.text(subject.fullScore))")
-                            ExamTrendCard(subject: subject,exams: rows)
-                            DisclosureGroup("查看 \(rows.count) 条成绩明细") {
-                                VStack(spacing: 18) {
-                                    ForEach(ExamTimeline.points(rows,metric: .score,maximumPoints: Int.max).suffix(50).reversed()) { point in
-                                        Button { editing = point.exam } label: { ExamRowView(exam: point.exam,subjects: model.subjects).foregroundStyle(.primary) }.buttonStyle(.plain)
-                                    }
-                                }.padding(.top,16)
-                            }.font(.subheadline).studySurface()
-                        }
+            if loading { ProgressView("正在整理成绩") }
+            else if let failure { EmptyStudyView(title: "暂时无法读取",message: failure,symbol: "arrow.clockwise",actionTitle: "重试") { Task { await load() } } }
+            else if data.exams.isEmpty { EmptyStudyView(title: "你的曲线，等待起笔",message: "记录考试后，在这里回看成长。",symbol: "chart.xyaxis.line",actionTitle: "添加成绩") { recording = .single } }
+            else {
+                if groupID.isEmpty {
+                    ForEach(Array(Set(groups.filter { !$0.exams.isEmpty }.map { $0.subject.fullScore })).sorted(),id: \.self) { full in
+                        MultiSubjectChart(groups: groups.filter { $0.subject.fullScore == full },fullScore: full)
                     }
+                } else if let group = groups.first, !group.exams.isEmpty { ExamTrendCard(subject: group.subject,exams: group.exams) }
+                ForEach(groups) { group in
+                    VStack(alignment: .leading,spacing: 16) {
+                        SectionHeading(title: group.subject.name,detail: "满分 \(Score.text(group.subject.fullScore))")
+                        SummaryView(summary: group.summary)
+                        DisclosureGroup("查看 \(group.exams.count) 条成绩明细") {
+                            let rows = group.exams.reversed().filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }
+                            VStack(spacing: 16) {
+                                ForEach(Array(rows.prefix(visibleCounts[group.id] ?? 50))) { exam in
+                                    SwipeDeleteRow(action: { Task { await model.deleteRecord(exam) } }) {
+                                        Button { editing = exam } label: { ExamRowView(exam: exam,subjects: data.subjects).foregroundStyle(.primary) }.buttonStyle(.plain)
+                                    }
+                                }
+                                if rows.count > (visibleCounts[group.id] ?? 50) { Button("继续查看 50 条") { visibleCounts[group.id] = (visibleCounts[group.id] ?? 50)+50 } }
+                            }.padding(.top,16)
+                        }
+                    }.studySurface()
                 }
-                VStack(alignment: .leading,spacing: 14) { SectionHeading(title: "成绩概览",detail: "\(summary.count) 次考试"); SummaryView(summary: summary) }.studySurface()
             }
-        }.navigationTitle("分析").navigationBarTitleDisplayMode(.inline)
-            .task(id: "\(subjectID)|\(model.dataRevision)") { await load() }
-            .recordEntry($recording)
-            .sheet(item: $editing) { exam in if let scope = model.scope { ExamEditorView(scope: scope,existing: exam) } }
+        }.navigationTitle("成绩分析").navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $search,prompt: "搜索考试名称")
+            .toolbar { Menu { Button("添加成绩",systemImage: "plus") { recording = .single }; Button("批量录入",systemImage: "square.stack.3d.up") { recording = .batch } } label: { Image(systemName: "plus") }.accessibilityLabel("添加成绩") }
+            .task(id: queryKey) { await load() }.refreshable { await load() }.recordEntry($recording)
+            .onChange(of: model.analysisRoute) { _,route in if let route { wholeStage = route.wholeStage; Task { await load(); if let id = route.subjectID,let group = data.groups.first(where: { $0.subject.id == id || $0.exams.contains(where: { $0.subjectID == id }) }) { groupID = group.id } } } }
+            .onAppear { if let route = model.analysisRoute { wholeStage = route.wholeStage } }
+            .sheet(item: $editing) { exam in ExamEditorView(scope: StudyScope(userID: exam.userID,semesterID: exam.semesterID),existing: exam) }
     }
     func load() async {
-        guard let store = model.store, let scope = model.scope else { return }; loading = true; failure = nil
+        guard let store = model.store,let scope = model.scope else { return }
+        let key = queryKey; loading = true; failure = nil
         do {
-            let filter = ExamFilter(subjectID: subjectID.isEmpty ? nil : subjectID)
-            var page = try await store.exams(scope: scope,filter: filter,offset: 0,limit: 1000), all = page.rows
-            while all.count < page.total {
-                try Task.checkCancellation(); page = try await store.exams(scope: scope,filter: filter,offset: all.count,limit: 1000); all += page.rows
-            }
-            guard scope == model.scope, !Task.isCancelled else { return }; exams = all; summary = page.summary; loading = false
-        } catch { if !Task.isCancelled { failure = model.friendly(error); loading = false } }
+            let next = try await store.analysis(scope: scope,wholeStage: wholeStage)
+            guard !Task.isCancelled, key == queryKey, scope == model.scope else { return }
+            data = next; if !next.groups.contains(where: { $0.id == groupID }) { groupID = "" }; visibleCounts = [:]; loading = false
+        } catch { if !Task.isCancelled, key == queryKey { failure = model.friendly(error); loading = false } }
     }
+}
+
+struct MultiSubjectChart: View {
+    let groups: [AnalysisGroup]
+    let fullScore: Int64
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var reveal: CGFloat = 0
+    @State private var selected: Double?
+    var rows: [Exam] { groups.flatMap(\.exams).sorted { ($0.date.description,$0.createdAt,$0.id) < ($1.date.description,$1.createdAt,$1.id) } }
+    func position(_ exam: Exam) -> Double {
+        let day = exam.date.date.timeIntervalSince1970 / 86400
+        let sameDay = rows.filter { $0.date == exam.date }
+        let index = sameDay.firstIndex(where: { $0.id == exam.id }) ?? 0
+        return day + Double(index)/Double(max(1,sameDay.count))*0.4
+    }
+    func color(_ group: AnalysisGroup) -> Color {
+        let index = group.subject.name.unicodeScalars.reduce(0) { ($0*31+Int($1.value)) % 360 }
+        return Color(hue: Double(index)/360,saturation: 0.68,brightness: 0.78)
+    }
+    var body: some View {
+        VStack(alignment: .leading,spacing: 16) {
+            SectionHeading(title: "\(Score.text(fullScore)) 分制",detail: "\(groups.filter { !$0.exams.isEmpty }.count) 科")
+            Chart {
+                ForEach(groups) { group in
+                    ForEach(group.exams) { exam in
+                        LineMark(x: .value("日期",position(exam)),y: .value("分数",Double(exam.score)/100),series: .value("科目",group.id))
+                            .interpolationMethod(.monotone).foregroundStyle(color(group)).lineStyle(StrokeStyle(lineWidth: 2.5))
+                        PointMark(x: .value("日期",position(exam)),y: .value("分数",Double(exam.score)/100)).foregroundStyle(color(group)).symbolSize(24)
+                            .accessibilityLabel("\(group.subject.name)，\(exam.date.description)，\(exam.name)，\(Score.text(exam.score))分")
+                    }
+                }
+                if let selected { RuleMark(x: .value("选择",selected)).foregroundStyle(.secondary.opacity(0.5)) }
+            }.chartYScale(domain: 0...Double(fullScore)/100)
+                .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { value in AxisValueLabel { if let day = value.as(Double.self) { Text(Date(timeIntervalSince1970: day*86400),format: .dateTime.month().day()).font(.caption2) } } } }
+                .chartXSelection(value: $selected)
+                .chartPlotStyle { plot in plot.mask(alignment: .leading) { GeometryReader { proxy in Rectangle().frame(width: proxy.size.width * reveal) } } }
+                .frame(height: 230).accessibilityIdentifier("analysis.chart")
+            if let selected,let exam = rows.min(by: { abs(position($0)-selected) < abs(position($1)-selected) }),let group = groups.first(where: { $0.exams.contains(where: { $0.id == exam.id }) }) {
+                Text("\(group.subject.name) · \(exam.date.description) · \(exam.name) · \(Score.text(exam.score))分").font(.caption)
+            }
+            ViewThatFits { HStack { legend }; VStack(alignment: .leading) { legend } }
+            Text("按真实日期排列 · 同日考试独立显示").font(.caption).foregroundStyle(.secondary)
+        }.studySurface().task(id: rows.map(\.id)) {
+            reveal = reduceMotion ? 1 : 0
+            guard !reduceMotion else { return }
+            do { try await Task.sleep(for: .milliseconds(70)); try Task.checkCancellation() } catch { return }
+            withAnimation(.easeInOut(duration: 0.8)) { reveal = 1 }
+        }
+    }
+    @ViewBuilder var legend: some View { ForEach(groups.filter { !$0.exams.isEmpty }) { group in Label { Text(group.subject.name) } icon: { Circle().fill(color(group)).frame(width: 8,height: 8) }.font(.caption) } }
 }
 
 struct ExamTrendCard: View {
@@ -68,6 +129,8 @@ struct ExamTrendCard: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var metric = 0
     @State private var selectedPosition: Double?
+    @State private var reveal: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var selectedMetric: ExamTimeline.Metric { [.score,.classRank,.gradeRank,.districtRank][metric] }
     var points: [ExamTimeline.Point] { ExamTimeline.points(exams,metric: selectedMetric) }
     var allPoints: [ExamTimeline.Point] { ExamTimeline.points(exams,metric: selectedMetric,maximumPoints: Int.max) }
@@ -94,6 +157,12 @@ struct ExamTrendCard: View {
                 ContentUnavailableView("还没有这类排名",systemImage: "list.number",description: Text("编辑成绩时可以补充排名。"))
             }
         }.studySurface().onChange(of: metric) { _,_ in selectedPosition = nil }.sensoryFeedback(.selection,trigger: metric)
+            .task(id: "\(metric)|\(exams.map(\.id))") {
+                reveal = reduceMotion ? 1 : 0
+                guard !reduceMotion else { return }
+                do { try await Task.sleep(for: .milliseconds(70)); try Task.checkCancellation() } catch { return }
+                withAnimation(.easeInOut(duration: 0.8)) { reveal = 1 }
+            }
     }
     var trendChart: some View {
         Chart {
@@ -129,6 +198,7 @@ struct ExamTrendCard: View {
             }
         }
         .chartXSelection(value: $selectedPosition).frame(height: 220).padding(.top,4)
+        .chartPlotStyle { plot in plot.mask(alignment: .leading) { GeometryReader { proxy in Rectangle().frame(width: proxy.size.width * reveal) } } }
         .accessibilityIdentifier("analysis.chart")
     }
     var xTicks: [Double] {

@@ -6,16 +6,15 @@ final class StudyTrackUITests: XCTestCase {
         XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["home.avatar"].exists)
         snapshot(app,"01-home-wallpaper")
-        app.tabBars.buttons["分析"].tap()
+        app.tabBars.buttons["成绩分析"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["analysis.chart"].firstMatch.waitForExistence(timeout: 10))
         snapshot(app,"02-analysis-same-day")
-        app.segmentedControls.buttons["班排"].firstMatch.tap()
         snapshot(app,"03-ranking-with-missing-value")
         app.tabBars.buttons["设置"].tap()
         XCTAssertTrue(app.staticTexts["StudyTrack"].waitForExistence(timeout: 5))
         snapshot(app,"04-settings-brand")
         app.buttons["settings.appearance"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["appearance.preview"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["内容质感"].waitForExistence(timeout: 5))
         snapshot(app,"05-personalization")
     }
     @MainActor func testDarkLargeTypeWithWallpaper() throws {
@@ -37,7 +36,6 @@ final class StudyTrackUITests: XCTestCase {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting"]; app.launch()
         let name = app.textFields["onboarding.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 15)); name.tap(); name.typeText("Student\n")
-        let semester = app.textFields["onboarding.semester"]; semester.typeText("Fall\n")
         app.buttons["onboarding.start"].tap()
         let add = app.buttons["home.add"]
         XCTAssertTrue(add.waitForExistence(timeout: 10)); XCTAssertTrue(add.isEnabled); add.tap()
@@ -53,7 +51,6 @@ final class StudyTrackUITests: XCTestCase {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting"]; app.launch()
         let name = app.textFields["onboarding.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 15)); name.tap(); name.typeText("Student\n")
-        let semester = app.textFields["onboarding.semester"]; semester.typeText("Fall\n")
         app.buttons["onboarding.start"].tap()
         XCTAssertTrue(app.tabBars.buttons["科目"].waitForExistence(timeout: 10))
         app.tabBars.buttons["科目"].tap(); app.buttons["subjects.add"].tap()

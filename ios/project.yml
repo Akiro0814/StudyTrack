@@ -41,7 +41,13 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         LSSupportsOpeningDocumentsInPlace: true
+        CFBundleURLTypes:
+          - CFBundleURLName: StudyTrack Analysis
+            CFBundleURLSchemes: [studytrack]
         CFBundleDocumentTypes:
+          - CFBundleTypeName: Excel Workbook
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [org.openxmlformats.spreadsheetml.sheet]
           - CFBundleTypeName: StudyTrack Backup
             LSHandlerRank: Owner
             LSItemContentTypes: [com.repea.studytrack.ios.backup]
@@ -51,12 +57,58 @@ targets:
             UTTypeConformsTo: [public.zip-archive]
             UTTypeTagSpecification:
               public.filename-extension: [studytrackbackup]
+        UTImportedTypeDeclarations:
+          - UTTypeIdentifier: org.openxmlformats.spreadsheetml.sheet
+            UTTypeDescription: Excel Workbook
+            UTTypeConformsTo: [public.zip-archive, public.data]
+            UTTypeTagSpecification:
+              public.filename-extension: [xlsx]
+              public.mime-type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+        NSUbiquitousContainers:
+          iCloud.com.repea.studytrack.ios:
+            NSUbiquitousContainerIsDocumentScopePublic: true
+            NSUbiquitousContainerName: StudyTrack
+            NSUbiquitousContainerSupportedFolderLevels: Any
+    entitlements:
+      path: Config/StudyTrack.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.repea.studytrack.ios]
+        com.apple.developer.icloud-container-identifiers: [iCloud.com.repea.studytrack.ios]
+        com.apple.developer.ubiquity-container-identifiers: [iCloud.com.repea.studytrack.ios]
+        com.apple.developer.icloud-services: [CloudDocuments]
+        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)com.repea.studytrack.ios
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.repea.studytrack.ios
         TARGETED_DEVICE_FAMILY: '1'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.education
+    dependencies:
+      - package: StudyTrackCore
+      - target: StudyTrackWidgets
+        embed: true
+  StudyTrackWidgets:
+    type: app-extension
+    platform: iOS
+    sources: [StudyTrackWidgets]
+    info:
+      path: StudyTrackWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: 学迹小组件
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Config/StudyTrackWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.repea.studytrack.ios]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.repea.studytrack.ios.widgets
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+        TARGETED_DEVICE_FAMILY: '1'
     dependencies:
       - package: StudyTrackCore
   StudyTrackTests:
