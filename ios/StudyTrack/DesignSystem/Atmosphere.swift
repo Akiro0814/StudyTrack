@@ -37,29 +37,72 @@ extension UIImage {
     }
 }
 
-struct ProgressiveTopBlur: View {
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+struct SwipeDeleteRow<Content: View>: View {
+    var action: () -> Void
+    var onTap: () -> Void
+    @ViewBuilder var content: Content
+    @State private var offset: CGFloat = 0
+    @State private var dragStart: CGFloat?
     var body: some View {
-        GeometryReader { proxy in
-            Rectangle().fill(reduceTransparency ? AnyShapeStyle(Color(uiColor: .systemBackground)) : AnyShapeStyle(.ultraThinMaterial))
-                .mask { LinearGradient(stops: [.init(color: .black,location: 0),.init(color: .black.opacity(0.9),location: 0.35),.init(color: .clear,location: 1)],startPoint: .top,endPoint: .bottom) }
-                .frame(height: proxy.safeAreaInsets.top + 72).frame(maxHeight: .infinity,alignment: .top).ignoresSafeArea(edges: .top)
-        }.allowsHitTesting(false).accessibilityHidden(true)
+        ZStack(alignment: .trailing) {
+            if offset < 0 {
+                Button(role: .destructive,action: action) {
+                    Image(systemName: "trash").frame(width: 72,height: 60).foregroundStyle(.white)
+                        .background(.red,in: RoundedRectangle(cornerRadius: 16))
+                }.buttonStyle(.plain).accessibilityLabel("删除成绩")
+            }
+            content.frame(maxWidth: .infinity,alignment: .leading)
+                .overlay {
+                    ScoreRowGestures(tap: {
+                        if offset < 0 { withAnimation(.snappy(duration: 0.2)) { offset = 0 } }
+                        else { onTap() }
+                    },drag: { translation in
+                        if dragStart == nil { dragStart = offset }
+                        offset = min(0,max(-88,(dragStart ?? 0)+translation))
+                    },end: { cancelled in
+                        dragStart = nil
+                        withAnimation(.snappy(duration: 0.2)) { offset = !cancelled && offset < -36 ? -80 : 0 }
+                    }).accessibilityHidden(true)
+                }.offset(x: offset)
+        }.clipped()
+            .accessibilityAction(named: Text("编辑成绩"),onTap)
+            .accessibilityAction(named: Text("删除成绩"),action)
     }
 }
 
-struct SwipeDeleteRow<Content: View>: View {
-    var action: () -> Void
-    @ViewBuilder var content: Content
-    @State private var offset: CGFloat = 0
-    var body: some View {
-        ZStack(alignment: .leading) {
-            if offset > 0 { Button(role: .destructive,action: action) { Label("删除",systemImage: "trash").labelStyle(.iconOnly).frame(width: 64,height: 60) }.tint(.red) }
-            content.offset(x: offset)
-                .simultaneousGesture(DragGesture(minimumDistance: 24).onChanged { value in
-                    guard abs(value.translation.width) > abs(value.translation.height)*1.5 else { return }
-                    offset = min(84,max(0,value.translation.width))
-                }.onEnded { _ in withAnimation(.snappy) { offset = offset > 44 ? 76 : 0 } })
-        }.clipped().accessibilityAction(named: Text("删除成绩"),action)
+/// Direction is decided before the recognizer begins, so vertical scrolling is
+/// left to the parent scroll view. A tap explicitly waits for the pan to fail.
+private struct ScoreRowGestures: UIViewRepresentable {
+    var tap: () -> Void
+    var drag: (CGFloat) -> Void
+    var end: (Bool) -> Void
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(); view.backgroundColor = .clear
+        let pan = UIPanGestureRecognizer(target: context.coordinator,action: #selector(Coordinator.pan(_:)))
+        pan.maximumNumberOfTouches = 1; pan.delegate = context.coordinator
+        let tap = UITapGestureRecognizer(target: context.coordinator,action: #selector(Coordinator.tap(_:)))
+        tap.require(toFail: pan)
+        view.addGestureRecognizer(pan); view.addGestureRecognizer(tap)
+        return view
+    }
+    func updateUIView(_ view: UIView,context: Context) { context.coordinator.parent = self }
+    final class Coordinator: NSObject,UIGestureRecognizerDelegate {
+        var parent: ScoreRowGestures
+        init(_ parent: ScoreRowGestures) { self.parent = parent }
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
+            let velocity = pan.velocity(in: pan.view?.window)
+            return abs(velocity.x) > abs(velocity.y)*1.4
+        }
+        @objc func tap(_ recognizer: UITapGestureRecognizer) { if recognizer.state == .ended { parent.tap() } }
+        @objc func pan(_ recognizer: UIPanGestureRecognizer) {
+            switch recognizer.state {
+            case .began,.changed: parent.drag(recognizer.translation(in: recognizer.view?.window).x)
+            case .ended: parent.end(false)
+            case .cancelled,.failed: parent.end(true)
+            default: break
+            }
+        }
     }
 }

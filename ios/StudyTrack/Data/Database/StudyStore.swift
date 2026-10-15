@@ -310,6 +310,20 @@ public actor StudyStore: ExamRepository {
             return asset
         }
     }
+    public func assets() throws -> [Asset] {
+        try queue.read { db in
+            try Row.fetchAll(db,sql: "SELECT * FROM assets").map { row in
+                Asset(id: row["id"],relativePath: row["relative_path"],mimeType: row["mime_type"],sha256: row["sha256"],byteCount: row["byte_count"])
+            }
+        }
+    }
+    public func userDataCounts(id: String) throws -> [Int] {
+        try queue.read { db in
+            try ["semesters","subjects","exam_records"].map { table in
+                try Int.fetchOne(db,sql: "SELECT COUNT(*) FROM \(table) WHERE user_id=?",arguments: [id]) ?? 0
+            }
+        }
+    }
     public func draft(key: String) throws -> Data? { try queue.read { try Data.fetchOne($0,sql: "SELECT payload FROM drafts WHERE key=?",arguments: [key]) } }
     public func setDraft(key: String, data: Data?) throws {
         try queue.write { db in

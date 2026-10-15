@@ -32,6 +32,33 @@ final class AppModel {
     var scope: StudyScope? { preferences.scope }
     var currentUser: User? { users.first { $0.id == preferences.currentUserID } }
     var currentSemester: Semester? { semesters.first { $0.id == preferences.currentSemesterID } }
+    var currentStage: SchoolStage? { currentSemester?.schoolTerm?.stage }
+    var stageSemesters: [Semester] { semesters.filter { $0.schoolTerm?.stage == currentStage } }
+    var nextSchoolTerm: SchoolTerm? {
+        guard let currentStage else { return nil }
+        return SemesterProgression.nextTerm(in: currentStage,existing: semesters.compactMap(\.schoolTerm))
+    }
+    func switchStage(_ stage: SchoolStage) async {
+        guard let scope else { return }
+        _ = await perform {
+            guard let store, self.scope == scope else { throw StudyError.scopeChanged }
+            let existing = try await store.semesters(userID: scope.userID).filter { $0.schoolTerm?.stage == stage }
+            let id: String
+            if let latest = existing.max(by: { ($0.schoolTerm?.order ?? 0) < ($1.schoolTerm?.order ?? 0) }) { id = latest.id }
+            else { id = try await store.saveSchoolSemester(term: SchoolTerm(stage: stage,year: 1,half: 1),userID: scope.userID) }
+            try await store.select(StudyScope(userID: scope.userID,semesterID: id))
+            recentlyDeleted = nil; selectionRevision += 1
+        }
+    }
+    func openNextSemester() async {
+        guard let scope,let term = nextSchoolTerm else { return }
+        _ = await perform {
+            guard let store,self.scope == scope else { throw StudyError.scopeChanged }
+            let id = try await store.saveSchoolSemester(term: term,userID: scope.userID)
+            try await store.select(StudyScope(userID: scope.userID,semesterID: id))
+            recentlyDeleted = nil; selectionRevision += 1
+        }
+    }
     var selectionRevision = 0
     var dataRevision = 0
     var wallpaper: UIImage?
@@ -41,6 +68,9 @@ final class AppModel {
     private var loadedWallpaperRevision = -1
     private var pendingPreferences: Preferences?
     private var savingPreferences = false
+    @ObservationIgnored var widgetUpdateTask: Task<Void,Never>?
+    @ObservationIgnored var widgetGeneration = 0
+    @ObservationIgnored let widgetPublisher = WidgetPublisher()
     var accent: Color {
         if let rgb = RGBColor.parse(preferences.accent) { return Color(red: Double(rgb.red)/255,green: Double(rgb.green)/255,blue: Double(rgb.blue)/255) }
         switch preferences.accent {
@@ -86,21 +116,27 @@ final class AppModel {
         preferences = p; users = u; semesters = terms; subjects = subs; home = page
         homeAnalysis = overview
         dataRevision = try await store.revision()
+        try await refreshImages(p)
+        scheduleWidgetUpdate()
+    }
+    private func refreshImages(_ p: Preferences) async throws {
+        guard let store else { return }
+        let selection = selectionRevision
         let avatarID = p.currentUserID.flatMap { p.avatarAssetID(for: $0) }
         if p.wallpaperAssetID != loadedWallpaperID || avatarID != loadedAvatarID || loadedWallpaperRevision != selectionRevision {
-            let assets = try await store.snapshot().assets
+            let assets = try await store.assets()
             func image(_ id: String?) async -> UIImage? {
                 guard let id, let asset = assets.first(where: { $0.id == id }), let files,
                       let data = try? await files.wallpaper(asset) else { return nil }
                 return UIImage(data: data)
             }
-            wallpaper = await image(p.wallpaperAssetID)
-            avatar = await image(avatarID)
+            let background = await image(p.wallpaperAssetID), profile = await image(avatarID)
+            guard selection == selectionRevision,preferences.wallpaperAssetID == p.wallpaperAssetID,preferences.currentUserID == p.currentUserID else { return }
+            wallpaper = background; avatar = profile
             loadedAvatarID = avatarID
             loadedWallpaperID = p.wallpaperAssetID
             loadedWallpaperRevision = selectionRevision
         }
-        await publishWidgets()
     }
     @discardableResult func perform(onError: ((String) -> Void)? = nil, _ action: () async throws -> Void) async -> Bool {
         guard !busy else { return false }; busy = true; defer { busy = false }
@@ -122,7 +158,12 @@ final class AppModel {
             do {
                 guard next.scope == scope else { throw StudyError.scopeChanged }
                 try await store?.updatePreferences(next)
-                try await reload()
+                let saved = try await store?.preferences() ?? next
+                guard saved.scope == scope else { throw StudyError.scopeChanged }
+                let widgetPrivacyChanged = preferences.multiUserEnabled != saved.multiUserEnabled
+                preferences = saved
+                try await refreshImages(saved)
+                if widgetPrivacyChanged { scheduleWidgetUpdate() }
             } catch { self.error = friendly(error) }
         }
     }

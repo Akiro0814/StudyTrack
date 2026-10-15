@@ -5,6 +5,19 @@ import GRDB
 @testable import StudyTrackCore
 
 final class SchoolSystemTests: XCTestCase {
+    func testProgressionStaysInStageAndFillsGapsBeforeAdvancing() {
+        let high = SchoolTerm.catalog(for: .high)
+        XCTAssertEqual(SemesterProgression.nextTerm(in: .high,existing: []),high[0])
+        XCTAssertEqual(SemesterProgression.nextTerm(in: .high,existing: Array(high.prefix(2))),high[2])
+        XCTAssertEqual(SemesterProgression.nextTerm(in: .high,existing: [high[0],high[5]]),high[1])
+        XCTAssertEqual(SemesterProgression.nextTerm(in: .high,existing: SchoolTerm.catalog(for: .junior)),high[0])
+        for stage in SchoolStage.allCases {
+            XCTAssertNil(SemesterProgression.nextTerm(in: stage,existing: SchoolTerm.catalog(for: stage)))
+        }
+        XCTAssertEqual(SchoolStage.primary.next,.junior)
+        XCTAssertEqual(SchoolStage.high.next,.university)
+        XCTAssertNil(SchoolStage.university.next)
+    }
     func testClassifyingLegacyTermJoinsUnambiguousSubjectHistory() async throws {
         let store = try StudyStore(path: ":memory:")
         let legacy = try await store.createUser(name: "学生",semester: "2026 秋")

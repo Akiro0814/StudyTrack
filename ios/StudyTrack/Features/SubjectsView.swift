@@ -6,6 +6,7 @@ struct SubjectsView: View {
     @State private var editing: Subject?
     @State private var editor = false
     @State private var deleting: Subject?
+    @State private var confirmDelete = false
     @State private var counts: [String: Int] = [:]
     var body: some View {
         List {
@@ -25,15 +26,15 @@ struct SubjectsView: View {
                         Spacer(); Image(systemName: "chevron.right").foregroundStyle(.tertiary)
                     }.foregroundStyle(.primary).studySurface()
                 }.buttonStyle(.plain).listRowBackground(Color.clear).listRowSeparator(.hidden).listRowInsets(EdgeInsets(top: 6,leading: 20,bottom: 6,trailing: 20))
-                    .swipeActions { Button("删除",role: .destructive) { deleting = subject } }
+                    .swipeActions { Button("删除",role: .destructive) { deleting = subject; confirmDelete = true } }
             }
         }.listStyle(.plain).studyCanvas().navigationTitle("科目").navigationBarTitleDisplayMode(.inline)
             .toolbar { Button("添加科目",systemImage: "plus") { editing = nil; editor = true }.accessibilityIdentifier("subjects.add") }
             .sheet(isPresented: $editor) { if let scope = model.scope { SubjectEditorView(scope: scope,subject: editing) } }
-            .confirmationDialog("删除科目及其 \(counts[deleting?.id ?? ""] ?? 0) 条成绩？",isPresented: Binding(get: { deleting != nil },set: { if !$0 { deleting = nil } }),titleVisibility: .visible) {
+            .confirmationDialog("删除科目及其 \(counts[deleting?.id ?? ""] ?? 0) 条成绩？",isPresented: $confirmDelete,titleVisibility: .visible) {
                 Button("删除科目与成绩",role: .destructive) {
                     guard let subject = deleting, let scope = model.scope else { return }
-                    Task { _ = await model.perform { try await model.store?.deleteSubject(id: subject.id,scope: scope) } }; deleting = nil
+                    Task { _ = await model.perform { try await model.store?.deleteSubject(id: subject.id,scope: scope) } }
                 }
             }
             .task(id: model.dataRevision) {

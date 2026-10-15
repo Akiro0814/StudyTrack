@@ -76,11 +76,11 @@ struct DataTransferView: View {
                 }
             }
         }.studyCanvas().navigationTitle("数据与备份").navigationBarTitleDisplayMode(.inline)
-            .fileImporter(isPresented: $choosing,allowedContentTypes: restoring ? [.studytrackBackup,.zip,.data] : [.studytrackXLSX,.zip,.data,.item],allowsMultipleSelection: false) { result in
-                switch result {
-                case .success(let urls): if let file = urls.first { Task { await inspect(file) } }
-                case .failure(let error): if (error as NSError).code != NSUserCancelledError { model.error = "文件未能打开，请等待下载完成后重试。" }
-                }
+            .sheet(isPresented: $choosing) {
+                StudyDocumentPicker(onSelection: { file in
+                    choosing = false
+                    Task { await inspect(file) }
+                },onCancel: { choosing = false })
             }
             .sheet(item: $share) { file in ShareSheet(url: file.url) }
             .sheet(isPresented: $mapping) {

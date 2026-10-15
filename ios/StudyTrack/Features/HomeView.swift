@@ -67,15 +67,15 @@ struct HomeView: View {
                 }
             }
             VStack(alignment: .leading,spacing: 16) {
-                SectionHeading(title: "最近的足迹",detail: "轻点编辑 · 右滑删除")
+                SectionHeading(title: "最近的足迹",detail: "轻点编辑 · 左滑删除")
                 if model.home.rows.isEmpty {
                     EmptyStudyView(title: "把努力留在这里",message: "每场考试都是一个新的起点。",symbol: "pencil.and.list.clipboard",actionTitle: "记录第一场考试") { recording = .single }
                 } else {
                     VStack(spacing: 0) {
                         ForEach(Array(model.home.rows.enumerated()),id: \.element.id) { index,exam in
                             if index > 0 { Divider().padding(.vertical,12) }
-                            SwipeDeleteRow(action: { Task { await model.deleteRecord(exam) } }) {
-                                Button { editing = exam } label: { ExamRowView(exam: exam,subjects: model.subjects).foregroundStyle(.primary) }.buttonStyle(.plain)
+                            SwipeDeleteRow(action: { Task { await model.deleteRecord(exam) } },onTap: { editing = exam }) {
+                                ExamRowView(exam: exam,subjects: model.subjects).foregroundStyle(.primary)
                             }
                         }
                     }.studySurface()

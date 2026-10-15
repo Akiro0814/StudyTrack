@@ -43,8 +43,8 @@ struct AnalysisView: View {
                             let rows = group.exams.reversed().filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }
                             VStack(spacing: 16) {
                                 ForEach(Array(rows.prefix(visibleCounts[group.id] ?? 50))) { exam in
-                                    SwipeDeleteRow(action: { Task { await model.deleteRecord(exam) } }) {
-                                        Button { editing = exam } label: { ExamRowView(exam: exam,subjects: data.subjects).foregroundStyle(.primary) }.buttonStyle(.plain)
+                                    SwipeDeleteRow(action: { Task { await model.deleteRecord(exam) } },onTap: { editing = exam }) {
+                                        ExamRowView(exam: exam,subjects: data.subjects).foregroundStyle(.primary)
                                     }
                                 }
                                 if rows.count > (visibleCounts[group.id] ?? 50) { Button("继续查看 50 条") { visibleCounts[group.id] = (visibleCounts[group.id] ?? 50)+50 } }

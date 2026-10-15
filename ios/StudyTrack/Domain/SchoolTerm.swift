@@ -5,6 +5,20 @@ public enum SchoolStage: String, Codable, CaseIterable, Sendable, Identifiable {
     public var id: String { rawValue }
     public var label: String { switch self { case .primary: "小学阶段"; case .junior: "初中阶段"; case .high: "高中阶段"; case .university: "大学阶段" } }
     public var years: Int { switch self { case .primary: 6; case .junior, .high: 3; case .university: 4 } }
+    public var next: Self? {
+        guard let index = Self.allCases.firstIndex(of: self),index+1 < Self.allCases.count else { return nil }
+        return Self.allCases[index+1]
+    }
+}
+public enum SemesterProgression {
+    /// Continue after the latest created term; fill earlier holes before leaving
+    /// a stage. Foreign-stage terms never affect this stage's progression.
+    public static func nextTerm(in stage: SchoolStage,existing: [SchoolTerm]) -> SchoolTerm? {
+        let catalog = SchoolTerm.catalog(for: stage)
+        let created = Set(existing.filter { $0.stage == stage && $0.valid })
+        let last = created.map(\.order).max() ?? 0
+        return catalog.first { $0.order > last && !created.contains($0) } ?? catalog.first { !created.contains($0) }
+    }
 }
 public struct SchoolTerm: Codable, Hashable, Sendable, Identifiable {
     public let stage: SchoolStage

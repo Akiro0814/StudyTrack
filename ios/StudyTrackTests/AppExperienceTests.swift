@@ -5,6 +5,65 @@ import UIKit
 import StudyTrackCore
 
 final class AppExperienceTests: XCTestCase {
+    func testOlderWidgetExportCannotReplaceNewerContent() async throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("widget-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let store = try StudyStore(path: ":memory:")
+        let scope = try await store.createProfile(name: "旧名字",term: SchoolTerm(stage: .high,year: 1,half: 1),avatar: nil)
+        _ = try await store.saveSubject(id: nil,name: "数学",fullScore: 10000,scope: scope)
+        let old = try await store.snapshot()
+        try await store.renameUser(id: scope.userID,name: "新名字")
+        let new = try await store.snapshot()
+        let publisher = WidgetPublisher()
+        let latest = try await publisher.publish(new,to: url,generation: 2)
+        let stale = try await publisher.publish(old,to: url,generation: 1)
+        XCTAssertTrue(latest); XCTAssertFalse(stale)
+        let archive = try JSONDecoder().decode(WidgetArchive.self,from: Data(contentsOf: url))
+        XCTAssertTrue(archive.series.allSatisfy { $0.subtitle.contains("新名字") })
+    }
+    @MainActor func testDocumentPickerAcceptsGenericFilesAsCopiesAndFoldersInPlace() {
+        let file = StudyDocumentPicker.makeController(for: .file)
+        XCTAssertTrue(StudyDocumentPicker.Mode.file.asCopy)
+        XCTAssertEqual(StudyDocumentPicker.Mode.file.contentTypes.map(\.identifier),["public.item"])
+        XCTAssertFalse(file.allowsMultipleSelection)
+        XCTAssertTrue(file.shouldShowFileExtensions)
+        XCTAssertFalse(StudyDocumentPicker.Mode.folder.asCopy)
+        XCTAssertEqual(StudyDocumentPicker.Mode.folder.contentTypes.map(\.identifier),["public.folder"])
+    }
+    func testBackupDirectoryRoundTripWithoutAppICloudContainer() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root,withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = CloudBackupService(testDirectory: root)
+        let store = try StudyStore(path: ":memory:")
+        _ = try await store.createProfile(name: "学生",term: SchoolTerm(stage: .high,year: 1,half: 1),avatar: nil)
+        let snapshot = try await store.snapshot()
+        let bytes = try BackupCodec.encode(snapshot,resources: [:])
+        try await service.upload(bytes)
+        let list = try await service.list()
+        XCTAssertEqual(list.count,1)
+        let downloaded = try await service.download(list[0])
+        XCTAssertEqual(downloaded,bytes)
+        let verified = try BackupCodec.decode(downloaded)
+        XCTAssertEqual(verified.snapshot.users.first?.name,"学生")
+    }
+    @MainActor func testStageSwitchAndNextSemesterKeepExamsSeparate() async throws {
+        let store = try StudyStore(path: ":memory:")
+        let scope = try await store.createProfile(name: "学生",term: SchoolTerm(stage: .high,year: 1,half: 1),avatar: nil)
+        let subject = try await store.saveSubject(id: nil,name: "数学",fullScore: 10000,scope: scope)
+        _ = try await store.saveExams([ExamInput(subjectID: subject.id,name: "考试",date: LocalDate("2026-10-15"),score: 9000)],scope: scope)
+        let model = AppModel(); model.store = store; try await model.reload()
+        await model.openNextSemester()
+        XCTAssertEqual(model.currentSemester?.schoolTerm,SchoolTerm(stage: .high,year: 1,half: 2))
+        XCTAssertEqual(model.subjects.first?.name,"数学"); XCTAssertEqual(model.home.total,0)
+        await model.switchStage(.university)
+        XCTAssertEqual(model.currentSemester?.schoolTerm?.stage,.university)
+        XCTAssertTrue(model.subjects.isEmpty)
+        XCTAssertEqual(model.stageSemesters.count,1)
+        await model.switchStage(.high)
+        XCTAssertEqual(model.stageSemesters.count,2)
+        XCTAssertTrue(model.stageSemesters.allSatisfy { $0.schoolTerm?.stage == .high })
+    }
     @MainActor func testRapidAppearanceChangesPersistTheLastValue() async throws {
         let store = try StudyStore(path: ":memory:")
         _ = try await store.createUser(name: "A",semester: "高一上学期")

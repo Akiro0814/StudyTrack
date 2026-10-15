@@ -4,6 +4,7 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
     @State private var selectedTab = 0
     @State private var pendingWidgetURL: URL?
+    @State private var showsProgress = false
     var body: some View {
         @Bindable var model = model
         Group {
@@ -43,7 +44,13 @@ struct RootView: View {
                     .font(.subheadline).padding().background(.regularMaterial,in: Capsule()).padding(.horizontal)
             }
         }
-        .overlay { if model.busy { ProgressView().padding(24).background(.regularMaterial,in: RoundedRectangle(cornerRadius: 18)) } }
+        .task(id: model.busy) {
+            showsProgress = false
+            guard model.busy else { return }
+            do { try await Task.sleep(for: .milliseconds(300)); try Task.checkCancellation() } catch { return }
+            showsProgress = model.busy
+        }
+        .overlay { if showsProgress { ProgressView().padding(24).background(.regularMaterial,in: RoundedRectangle(cornerRadius: 18)) } }
         .alert(model.error != nil ? "操作未完成" : "学迹",isPresented: Binding(get: { model.error != nil || model.notice != nil },set: { if !$0 { model.error = nil; model.notice = nil } })) {
             Button("好",role: .cancel) { model.error = nil; model.notice = nil }
         } message: { Text(model.error ?? model.notice ?? "") }

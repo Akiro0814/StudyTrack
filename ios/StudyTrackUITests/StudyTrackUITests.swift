@@ -12,18 +12,24 @@ final class StudyTrackUITests: XCTestCase {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting-showcase"]; app.launch()
         XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 15))
         app.tabBars.buttons["设置"].tap()
+        reveal(app.buttons["settings.semesters"],in: app)
         app.buttons["settings.semesters"].tap()
         XCTAssertTrue(app.buttons["semester.next"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["大学阶段"].exists)
         app.buttons["semester.next"].tap()
+        XCTAssertTrue(app.staticTexts["高一下学期"].waitForExistence(timeout: 10))
+        app.tabBars.buttons["首页"].tap()
         XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 10))
         app.tabBars.buttons["设置"].tap()
+        reveal(app.buttons["settings.stages"],in: app)
         app.buttons["settings.stages"].tap()
         XCTAssertTrue(app.buttons["stage.university"].waitForExistence(timeout: 5))
         snapshot(app,"11-learning-stages")
         app.buttons["stage.university"].tap()
         XCTAssertTrue(app.buttons["开启大学阶段"].waitForExistence(timeout: 5))
         app.buttons["开启大学阶段"].tap()
+        XCTAssertTrue(app.staticTexts["大学阶段"].waitForExistence(timeout: 10))
+        app.tabBars.buttons["首页"].tap()
         XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 10))
     }
     @MainActor func testRecentScoreSwipesLeftWithoutOpeningEditor() throws {
@@ -78,6 +84,9 @@ final class StudyTrackUITests: XCTestCase {
     }
     @MainActor private func snapshot(_ app: XCUIApplication,_ name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+    }
+    @MainActor private func reveal(_ element: XCUIElement,in app: XCUIApplication) {
+        for _ in 0..<6 { if element.isHittable { return }; app.swipeUp() }
     }
     @MainActor func testFirstRecordGuidesThroughSubjectAndContinuesToExam() throws {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting"]; app.launch()

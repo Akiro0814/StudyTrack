@@ -37,7 +37,7 @@ struct StudyScroll<Content: View>: View {
                 .frame(maxWidth: 720).padding(.horizontal,20).padding(.top,12).padding(.bottom,28)
                 .frame(maxWidth: .infinity)
         }.background { AppCanvas() }.scrollDismissesKeyboard(.interactively)
-            .overlay(alignment: .top) { ProgressiveTopBlur() }
+            .scrollEdgeEffectStyle(.soft,for: .top)
             .environment(\.colorScheme,model.wallpaper.map { $0.prefersLightText ? .dark : .light } ?? scheme)
             .environment(\.studySurfaceScheme,scheme)
     }
@@ -66,7 +66,7 @@ struct StudySurface: ViewModifier {
 }
 extension View {
     func studySurface() -> some View { modifier(StudySurface()) }
-    func studyCanvas() -> some View { scrollContentBackground(.hidden).background { AppCanvas() }.scrollDismissesKeyboard(.interactively).overlay(alignment: .top) { ProgressiveTopBlur() } }
+    func studyCanvas() -> some View { scrollContentBackground(.hidden).background { AppCanvas() }.scrollDismissesKeyboard(.interactively).scrollEdgeEffectStyle(.soft,for: .top) }
 }
 
 struct BrandMark: View {
