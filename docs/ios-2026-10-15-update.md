@@ -1,5 +1,7 @@
 # 2026-10-15 iOS 更新与验收记录
 
+> 后续 8 项实机反馈修复及 build 29 验证见 [后续更新记录](ios-2026-10-15-followup.md)。本文保留 build 24 的历史验收内容。
+
 本次按用户确认的 17 项方案实施。大学阶段固定为大一至大四、每年上下学期。当前工作目录为 `E:\Project\StudyTrack`；Git 交付目录为 `E:\Project\StudyTrack-iOS-delivery`，开发分支 `codex/ios-experience-20261015`。主分支未修改。
 
 ## 功能对应
