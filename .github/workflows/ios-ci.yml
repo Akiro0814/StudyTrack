@@ -35,7 +35,9 @@ jobs:
         with:
           node-version: '24'
       - name: Check database contracts
-        run: node ios/Scripts/check-contracts.mjs
+        run: |
+          node ios/Scripts/check-contracts.mjs
+          node ios/Scripts/check-school-contracts.mjs
       - name: Select locked Apple toolchain
         run: |
           python3 ios/Scripts/probe-environment.py

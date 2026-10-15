@@ -25,7 +25,7 @@ final class SchoolSystemTests: XCTestCase {
         let subject = try await store.saveSubject(id: nil,name: "数学",fullScore: 10000,scope: scope)
         let exams = try await store.saveExams([ExamInput(subjectID: subject.id,name: "旧成绩",date: LocalDate("2026-10-01"),score: 8500)],scope: scope)
         let queue = try DatabaseQueue(path: path)
-        try queue.write { db in
+        try await queue.write { db in
             try db.execute(sql: "DROP TABLE subject_lineage; DROP TABLE semester_school; DELETE FROM grdb_migrations WHERE identifier='v2-school-system'")
         }
         let upgraded = try StudyStore(path: path)
