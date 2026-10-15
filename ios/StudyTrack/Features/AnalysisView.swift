@@ -80,28 +80,20 @@ struct MultiSubjectChart: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var reveal: CGFloat = 0
     @State private var selected: Double?
-    var rows: [Exam] { groups.flatMap(\.exams).sorted { ($0.date.description,$0.createdAt,$0.id) < ($1.date.description,$1.createdAt,$1.id) } }
-    func position(_ exam: Exam) -> Double {
-        let day = exam.date.date.timeIntervalSince1970 / 86400
-        let sameDay = rows.filter { $0.date == exam.date }
-        let index = sameDay.firstIndex(where: { $0.id == exam.id }) ?? 0
-        return day + Double(index)/Double(max(1,sameDay.count))*0.4
-    }
-    func color(_ group: AnalysisGroup) -> Color {
-        let index = group.subject.name.unicodeScalars.reduce(0) { ($0*31+Int($1.value)) % 360 }
-        return Color(hue: Double(index)/360,saturation: 0.68,brightness: 0.78)
+    func color(_ id: String) -> Color {
+        let index = groups.firstIndex { $0.id == id } ?? 0
+        return Color(hue: (0.61 + Double(index)*0.61803398875).truncatingRemainder(dividingBy: 1),saturation: 0.7,brightness: 0.8)
     }
     var body: some View {
+        let timeline = MultiSubjectTimeline(groups: groups)
         VStack(alignment: .leading,spacing: 16) {
             SectionHeading(title: "\(Score.text(fullScore)) 分制",detail: "\(groups.filter { !$0.exams.isEmpty }.count) 科")
             Chart {
-                ForEach(groups) { group in
-                    ForEach(group.exams) { exam in
-                        LineMark(x: .value("日期",position(exam)),y: .value("分数",Double(exam.score)/100),series: .value("科目",group.id))
-                            .interpolationMethod(.monotone).foregroundStyle(color(group)).lineStyle(StrokeStyle(lineWidth: 2.5))
-                        PointMark(x: .value("日期",position(exam)),y: .value("分数",Double(exam.score)/100)).foregroundStyle(color(group)).symbolSize(24)
-                            .accessibilityLabel("\(group.subject.name)，\(exam.date.description)，\(exam.name)，\(Score.text(exam.score))分")
-                    }
+                ForEach(timeline.plotted) { point in
+                    LineMark(x: .value("日期",point.x),y: .value("分数",point.value),series: .value("科目",point.groupID))
+                        .interpolationMethod(.monotone).foregroundStyle(color(point.groupID)).lineStyle(StrokeStyle(lineWidth: 2.5))
+                    PointMark(x: .value("日期",point.x),y: .value("分数",point.value)).foregroundStyle(color(point.groupID)).symbolSize(24)
+                        .accessibilityLabel("\(point.exam.date.description)，\(point.exam.name)，\(Score.text(point.exam.score))分")
                 }
                 if let selected { RuleMark(x: .value("选择",selected)).foregroundStyle(.secondary.opacity(0.5)) }
             }.chartYScale(domain: 0...Double(fullScore)/100)
@@ -109,19 +101,19 @@ struct MultiSubjectChart: View {
                 .chartXSelection(value: $selected)
                 .chartPlotStyle { plot in plot.mask(alignment: .leading) { GeometryReader { proxy in Rectangle().frame(width: proxy.size.width * reveal) } } }
                 .frame(height: 230).accessibilityIdentifier("analysis.chart")
-            if let selected,let exam = rows.min(by: { abs(position($0)-selected) < abs(position($1)-selected) }),let group = groups.first(where: { $0.exams.contains(where: { $0.id == exam.id }) }) {
-                Text("\(group.subject.name) · \(exam.date.description) · \(exam.name) · \(Score.text(exam.score))分").font(.caption)
+            if let selected,let point = timeline.all.min(by: { abs($0.x-selected) < abs($1.x-selected) }),let group = groups.first(where: { $0.id == point.groupID }) {
+                Text("\(group.subject.name) · \(point.exam.date.description) · \(point.exam.name) · \(Score.text(point.exam.score))分").font(.caption)
             }
             ViewThatFits { HStack { legend }; VStack(alignment: .leading) { legend } }
             Text("按真实日期排列 · 同日考试独立显示").font(.caption).foregroundStyle(.secondary)
-        }.studySurface().task(id: rows.map(\.id)) {
+        }.studySurface().task(id: timeline.all.map(\.id)) {
             reveal = reduceMotion ? 1 : 0
             guard !reduceMotion else { return }
             do { try await Task.sleep(for: .milliseconds(70)); try Task.checkCancellation() } catch { return }
             withAnimation(.easeInOut(duration: 0.8)) { reveal = 1 }
         }
     }
-    @ViewBuilder var legend: some View { ForEach(groups.filter { !$0.exams.isEmpty }) { group in Label { Text(group.subject.name) } icon: { Circle().fill(color(group)).frame(width: 8,height: 8) }.font(.caption) } }
+    @ViewBuilder var legend: some View { ForEach(groups.filter { !$0.exams.isEmpty }) { group in Label { Text(group.subject.name) } icon: { Circle().fill(color(group.id)).frame(width: 8,height: 8) }.font(.caption) } }
 }
 
 struct ExamTrendCard: View {

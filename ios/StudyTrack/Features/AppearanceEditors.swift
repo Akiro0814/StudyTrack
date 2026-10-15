@@ -46,9 +46,9 @@ struct ThemeColorEditor: View {
                 Text("亮度"); Slider(value: $brightness,in: 0...1).onChange(of: brightness) { _,_ in applyHSB() }
             }
             Section("RGB · 0–255") {
-                TextField("R",text: $red).keyboardType(.numbersAndPunctuation)
-                TextField("G",text: $green).keyboardType(.numbersAndPunctuation)
-                TextField("B",text: $blue).keyboardType(.numbersAndPunctuation)
+                LabeledContent("R") { TextField("0–255",text: $red).keyboardType(.numbersAndPunctuation).multilineTextAlignment(.trailing) }
+                LabeledContent("G") { TextField("0–255",text: $green).keyboardType(.numbersAndPunctuation).multilineTextAlignment(.trailing) }
+                LabeledContent("B") { TextField("0–255",text: $blue).keyboardType(.numbersAndPunctuation).multilineTextAlignment(.trailing) }
                 Button("应用 RGB") {
                     guard let r = Int(red),let g = Int(green),let b = Int(blue),[r,g,b].allSatisfy({ (0...255).contains($0) }) else { failure = "RGB 每项须为 0–255 的整数。"; return }
                     sync(RGBColor(red: r,green: g,blue: b))

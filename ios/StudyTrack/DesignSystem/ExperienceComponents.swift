@@ -1,6 +1,14 @@
 import SwiftUI
 import StudyTrackCore
 
+private struct StudySurfaceSchemeKey: EnvironmentKey { static let defaultValue: ColorScheme = .light }
+extension EnvironmentValues {
+    var studySurfaceScheme: ColorScheme {
+        get { self[StudySurfaceSchemeKey.self] }
+        set { self[StudySurfaceSchemeKey.self] = newValue }
+    }
+}
+
 struct AppCanvas: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var scheme
@@ -31,6 +39,7 @@ struct StudyScroll<Content: View>: View {
         }.background { AppCanvas() }.scrollDismissesKeyboard(.interactively)
             .overlay(alignment: .top) { ProgressiveTopBlur() }
             .environment(\.colorScheme,model.wallpaper.map { $0.prefersLightText ? .dark : .light } ?? scheme)
+            .environment(\.studySurfaceScheme,scheme)
     }
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var scheme
@@ -39,6 +48,7 @@ struct StudyScroll<Content: View>: View {
 struct StudySurface: ViewModifier {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityReduceTransparency) private var solid
+    @Environment(\.studySurfaceScheme) private var surfaceScheme
     func body(content: Content) -> some View {
         content.padding(20).frame(maxWidth: .infinity,alignment: .leading)
             .background {
@@ -51,6 +61,7 @@ struct StudySurface: ViewModifier {
                 } else { shape.fill(Color(uiColor: .secondarySystemGroupedBackground)) }
             }
             .overlay { RoundedRectangle(cornerRadius: 26).strokeBorder(.primary.opacity(0.04),lineWidth: 1) }
+            .environment(\.colorScheme,surfaceScheme)
     }
 }
 extension View {

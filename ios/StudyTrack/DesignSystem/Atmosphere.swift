@@ -25,9 +25,14 @@ extension UIImage {
         var bytes = [UInt8](repeating: 0,count: width*height*4)
         guard let cgImage, let context = CGContext(data: &bytes,width: width,height: height,bitsPerComponent: 8,bytesPerRow: width*4,space: CGColorSpaceCreateDeviceRGB(),bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return true }
         context.draw(cgImage,in: CGRect(x: 0,y: 0,width: width,height: height))
-        let samples = stride(from: 0,to: bytes.count,by: 4).map { index in
-            (0.2126*Double(bytes[index])+0.7152*Double(bytes[index+1])+0.0722*Double(bytes[index+2]))/255
-        }.sorted()
+        var samples: [Double] = []
+        for index in stride(from: 0,to: bytes.count,by: 4) {
+            let red = Double(bytes[index]) * 0.2126
+            let green = Double(bytes[index+1]) * 0.7152
+            let blue = Double(bytes[index+2]) * 0.0722
+            samples.append((red+green+blue)/255.0)
+        }
+        samples.sort()
         return samples[samples.count/2] < 0.57
     }
 }

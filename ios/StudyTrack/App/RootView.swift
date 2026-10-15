@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @State private var selectedTab = 0
+    @State private var pendingWidgetURL: URL?
     var body: some View {
         @Bindable var model = model
         Group {
@@ -24,7 +25,11 @@ struct RootView: View {
             }
         }
         .disabled(model.busy)
-        .onOpenURL { url in Task { await model.openWidget(url) } }
+        .onOpenURL { url in
+            if model.ready { Task { await model.openWidget(url) } }
+            else { pendingWidgetURL = url }
+        }
+        .onChange(of: model.ready) { _,ready in if ready,let url = pendingWidgetURL { pendingWidgetURL = nil; Task { await model.openWidget(url) } } }
         .onChange(of: model.analysisRoute) { _,value in if value != nil { selectedTab = 2 } }
         .task(id: model.recentlyDeleted?.id) {
             guard let id = model.recentlyDeleted?.id else { return }

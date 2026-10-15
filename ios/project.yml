@@ -76,7 +76,6 @@ targets:
         com.apple.developer.icloud-container-identifiers: [iCloud.com.repea.studytrack.ios]
         com.apple.developer.ubiquity-container-identifiers: [iCloud.com.repea.studytrack.ios]
         com.apple.developer.icloud-services: [CloudDocuments]
-        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)com.repea.studytrack.ios
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.repea.studytrack.ios

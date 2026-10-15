@@ -24,6 +24,7 @@ struct ProfileSetupForm: View {
     @State private var image: UIImage?
     @State private var avatar: Asset?
     @State private var photoLoading = false
+    @State private var photoRequest = UUID()
     @State private var failure: String?
     @FocusState private var editing: Bool
     var body: some View {
@@ -68,12 +69,15 @@ struct ProfileSetupForm: View {
         }.studyCanvas().navigationTitle(onboarding ? "" : "添加用户").navigationBarTitleDisplayMode(.inline)
             .onChange(of: item) { _,value in
                 guard let value else { return }; editing = false; photoLoading = true; failure = nil
+                let request = UUID(); photoRequest = request
                 Task {
-                    defer { photoLoading = false }
+                    defer { if request == photoRequest { photoLoading = false } }
                     do {
                         guard let data = try await value.loadTransferable(type: Data.self), let files = model.files else { throw StudyError.invalid("照片未能下载，请重试。") }
-                        avatar = try await files.saveAvatar(data); image = UIImage(data: data)
-                    } catch { failure = model.friendly(error) }
+                        let saved = try await files.saveAvatar(data)
+                        guard request == photoRequest else { return }
+                        avatar = saved; image = UIImage(data: data)
+                    } catch { if request == photoRequest { failure = model.friendly(error) } }
                 }
             }
     }

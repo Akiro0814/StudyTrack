@@ -3,6 +3,20 @@ import GRDB
 @testable import StudyTrackCore
 
 final class SchoolSystemTests: XCTestCase {
+    func testMultiSubjectTimelineSeparatesSameDayAndBoundsRendering() async throws {
+        let store = try StudyStore(path: ":memory:")
+        let scope = try await store.createProfile(name: "学生",term: SchoolTerm(stage: .high,year: 1,half: 1),avatar: nil)
+        let subject = try await store.saveSubject(id: nil,name: "数学",fullScore: 10000,scope: scope)
+        let inputs = try (0..<600).map { ExamInput(subjectID: subject.id,name: "考试\($0)",date: LocalDate("2026-10-01"),score: Int64($0 % 100)*100) }
+        _ = try await store.saveExams(inputs,scope: scope)
+        let data = try await store.analysis(scope: scope,wholeStage: false)
+        let timeline = MultiSubjectTimeline(groups: data.groups,maximumPointsPerSubject: 100)
+        XCTAssertEqual(timeline.all.count,600)
+        XCTAssertEqual(Set(timeline.all.map(\.x)).count,600)
+        XCTAssertLessThanOrEqual(timeline.plotted.count,100)
+        XCTAssertEqual(timeline.plotted.map(\.exam.score).max(),9900)
+        XCTAssertEqual(data.groups[0].summary.count,600)
+    }
     func testUpgradeFromV1KeepsIDsAndRecords() async throws {
         let path = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
         defer { try? FileManager.default.removeItem(atPath: path) }

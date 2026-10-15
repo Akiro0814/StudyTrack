@@ -15,7 +15,13 @@ extension StudyStore {
         }
     }
     static let schoolSchema = """
-    CREATE TABLE IF NOT EXISTS semester_school (semester_id TEXT PRIMARY KEY REFERENCES semesters(id) ON DELETE CASCADE, user_id TEXT NOT NULL, stage TEXT NOT NULL, year INTEGER NOT NULL, half INTEGER NOT NULL, UNIQUE(user_id,stage,year,half));
+    CREATE TABLE IF NOT EXISTS semester_school (
+      semester_id TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL,
+      stage TEXT NOT NULL CHECK(stage IN ('primary','junior','high','university')),
+      year INTEGER NOT NULL CHECK(year BETWEEN 1 AND CASE stage WHEN 'primary' THEN 6 WHEN 'university' THEN 4 ELSE 3 END),
+      half INTEGER NOT NULL CHECK(half IN (1,2)), UNIQUE(user_id,stage,year,half),
+      FOREIGN KEY(semester_id,user_id) REFERENCES semesters(id,user_id) ON DELETE CASCADE
+    );
     CREATE TABLE IF NOT EXISTS subject_lineage (subject_id TEXT PRIMARY KEY REFERENCES subjects(id) ON DELETE CASCADE, lineage_id TEXT NOT NULL);
     """
     static func readSemester(_ db: Database, _ row: Row) throws -> Semester {
