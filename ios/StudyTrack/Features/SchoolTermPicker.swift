@@ -28,6 +28,8 @@ struct ProfileSetupForm: View {
     @State private var failure: String?
     @FocusState private var editing: Bool
     var body: some View {
+        let previewImage = image
+        let loadingPhoto = photoLoading
         Form {
             if onboarding {
                 Section {
@@ -42,11 +44,11 @@ struct ProfileSetupForm: View {
                 PhotosPicker(selection: $item,matching: .images) {
                     HStack(spacing: 16) {
                         Group {
-                            if let image { Image(uiImage: image).resizable().scaledToFill() }
+                            if let previewImage { Image(uiImage: previewImage).resizable().scaledToFill() }
                             else { Image(systemName: "person.crop.circle.badge.plus").resizable().scaledToFit().padding(8) }
                         }.frame(width: 64,height: 64).clipShape(Circle())
-                        VStack(alignment: .leading,spacing: 5) { Text(image == nil ? "设置头像" : "更换头像"); Text("也可以稍后在个人资料中设置").font(.caption).foregroundStyle(.secondary) }
-                        if photoLoading { ProgressView() }
+                        VStack(alignment: .leading,spacing: 5) { Text(previewImage == nil ? "设置头像" : "更换头像"); Text("也可以稍后在个人资料中设置").font(.caption).foregroundStyle(.secondary) }
+                        if loadingPhoto { ProgressView() }
                     }.padding(.vertical,8)
                 }.accessibilityIdentifier("onboarding.avatar")
                 TextField("姓名或昵称",text: $name).textContentType(.nickname).focused($editing).submitLabel(.done).onSubmit { editing = false }.accessibilityIdentifier("onboarding.name").padding(.vertical,8)

@@ -172,7 +172,7 @@ struct ExamTrendCard: View {
                 PointMark(x: .value("考试序号",Double(point.position)),y: .value("数值",point.value)).symbolSize(exams.count > 40 ? 12 : 42).foregroundStyle(model.accent)
                     .accessibilityLabel("第 \(point.position) 次，\(point.exam.date.description)，\(point.exam.name)，\(metric == 0 ? Score.text(point.exam.score) + " 分" : String(Int(point.value)) + " 名")")
             }
-            if let selectedPosition, let point = highlighted {
+            if selectedPosition != nil, let point = highlighted {
                 RuleMark(x: .value("选择",Double(point.position))).foregroundStyle(.secondary.opacity(0.4)).lineStyle(StrokeStyle(dash: [4,4]))
                 PointMark(x: .value("选择",Double(point.position)),y: .value("数值",point.value)).symbolSize(80).foregroundStyle(model.accent)
             }

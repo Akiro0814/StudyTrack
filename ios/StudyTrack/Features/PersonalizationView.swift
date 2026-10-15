@@ -8,6 +8,8 @@ struct PersonalizationView: View {
     @State private var item: PhotosPickerItem?
     @State private var reset = false
     var body: some View {
+        let wallpaperPickerTitle = model.wallpaper == nil ? "从照片中选择" : "更换壁纸"
+        let wallpaperAccent = model.accent
         StudyScroll {
             VStack(alignment: .leading,spacing: 8) {
                 Text("让学迹，更像你。").font(.title2.bold())
@@ -35,7 +37,7 @@ struct PersonalizationView: View {
             VStack(alignment: .leading,spacing: 16) {
                 SectionHeading(title: "一张喜欢的壁纸")
                 PhotosPicker(selection: $item,matching: .images) {
-                    SettingsRow(title: model.wallpaper == nil ? "从照片中选择" : "更换壁纸",subtitle: "铺满学习空间，文字保持清晰",symbol: "photo.on.rectangle.angled",color: model.accent)
+                    SettingsRow(title: wallpaperPickerTitle,subtitle: "铺满学习空间，文字保持清晰",symbol: "photo.on.rectangle.angled",color: wallpaperAccent)
                 }.buttonStyle(.plain).accessibilityIdentifier("appearance.wallpaper")
                 if model.wallpaper != nil {
                     Divider()
