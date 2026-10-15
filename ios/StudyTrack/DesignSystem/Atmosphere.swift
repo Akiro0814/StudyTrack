@@ -52,6 +52,10 @@ struct SwipeDeleteRow<Content: View>: View {
                 }.buttonStyle(.plain).accessibilityLabel("删除成绩")
             }
             content.frame(maxWidth: .infinity,alignment: .leading)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction(.default,onTap)
+                .accessibilityAction(named: Text("编辑成绩"),onTap)
+                .accessibilityAction(named: Text("删除成绩"),action)
                 .overlay {
                     ScoreRowGestures(tap: {
                         if offset < 0 { withAnimation(.snappy(duration: 0.2)) { offset = 0 } }
@@ -65,8 +69,6 @@ struct SwipeDeleteRow<Content: View>: View {
                     }).accessibilityHidden(true)
                 }.offset(x: offset)
         }.clipped()
-            .accessibilityAction(named: Text("编辑成绩"),onTap)
-            .accessibilityAction(named: Text("删除成绩"),action)
     }
 }
 

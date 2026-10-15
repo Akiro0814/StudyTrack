@@ -7,10 +7,12 @@ final class StudyTrackUITests: XCTestCase {
         app.tabBars.buttons["设置"].tap()
         reveal(app.buttons["settings.data"],in: app); app.buttons["settings.data"].tap()
         app.buttons["导入 .xlsx"].tap()
-        let file = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@","StudyTrack Import Test")).firstMatch
+        let file = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@","StudyTrack Import Test")).firstMatch
         XCTAssertTrue(file.waitForExistence(timeout: 10))
         snapshot(app,"12-native-xlsx-selectable")
         XCTAssertTrue(file.isEnabled); file.tap()
+        XCTAssertTrue(app.buttons["导入 .xlsx"].waitForExistence(timeout: 10))
+        reveal(app.staticTexts["导入预览"],in: app)
         XCTAssertTrue(app.staticTexts["导入预览"].waitForExistence(timeout: 15))
         snapshot(app,"13-native-xlsx-import-preview")
     }
@@ -30,7 +32,7 @@ final class StudyTrackUITests: XCTestCase {
         XCTAssertTrue(app.buttons["semester.next"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["大学阶段"].exists)
         app.buttons["semester.next"].tap()
-        XCTAssertTrue(app.staticTexts["高一下学期"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@","settings.semesters","高一下学期")).firstMatch.waitForExistence(timeout: 10))
         app.tabBars.buttons["首页"].tap()
         XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 10))
         app.tabBars.buttons["设置"].tap()
@@ -41,18 +43,18 @@ final class StudyTrackUITests: XCTestCase {
         app.buttons["stage.university"].tap()
         XCTAssertTrue(app.buttons["开启大学阶段"].waitForExistence(timeout: 5))
         app.buttons["开启大学阶段"].tap()
-        XCTAssertTrue(app.staticTexts["大学阶段"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@","settings.stages","大学阶段")).firstMatch.waitForExistence(timeout: 10))
         app.tabBars.buttons["首页"].tap()
         XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 10))
     }
     @MainActor func testRecentScoreSwipesLeftWithoutOpeningEditor() throws {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting-showcase"]; app.launch()
         XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 15))
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@","阶段练习 4")).firstMatch
         for _ in 0..<5 {
-            if app.staticTexts["阶段练习 4"].isHittable { break }
+            if row.isHittable { break }
             app.swipeUp()
         }
-        let row = app.staticTexts["阶段练习 4"].firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         row.swipeLeft()
         XCTAssertFalse(app.textFields["exam.score"].exists)
@@ -63,8 +65,8 @@ final class StudyTrackUITests: XCTestCase {
         XCTAssertTrue(app.buttons["撤销"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.textFields["exam.score"].exists)
         app.buttons["撤销"].tap()
-        XCTAssertTrue(app.staticTexts["阶段练习 4"].waitForExistence(timeout: 5))
-        app.staticTexts["阶段练习 4"].firstMatch.tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
         XCTAssertTrue(app.textFields["exam.score"].waitForExistence(timeout: 5))
     }
     @MainActor func testExperienceWithWallpaperAndSameDayExams() throws {
