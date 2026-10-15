@@ -51,9 +51,11 @@ struct RootView: View {
 }
 
 private struct AppNavigation<Content: View>: View {
+    @Environment(\.colorScheme) private var scheme
     @ViewBuilder var content: Content
     var body: some View {
         NavigationStack { content }
             .containerBackground(for: .navigation) { AppCanvas() }
+            .environment(\.studySurfaceScheme,scheme)
     }
 }

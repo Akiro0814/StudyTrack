@@ -5,6 +5,19 @@ import UIKit
 import StudyTrackCore
 
 final class AppExperienceTests: XCTestCase {
+    @MainActor func testRapidAppearanceChangesPersistTheLastValue() async throws {
+        let store = try StudyStore(path: ":memory:")
+        _ = try await store.createUser(name: "A",semester: "高一上学期")
+        let model = AppModel(); model.store = store; try await model.reload()
+        var first = model.preferences; first.glassTint = 0.1
+        var last = model.preferences; last.glassTint = 0.4; last.displayMode = "dark"
+        let task = Task { await model.savePreferences(first) }
+        await Task.yield()
+        await model.savePreferences(last)
+        await task.value
+        let saved = try await store.preferences()
+        XCTAssertEqual(saved.glassTint,0.4); XCTAssertEqual(saved.displayMode,"dark")
+    }
     @MainActor func testImagesReloadAcrossThemesUserSwitchAndRemoval() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root,withIntermediateDirectories: true)

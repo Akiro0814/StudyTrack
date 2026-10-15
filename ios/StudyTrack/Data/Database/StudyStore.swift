@@ -63,7 +63,7 @@ public actor StudyStore: ExamRepository {
         try queue.write { db in
             var p = preferences; try Self.repairSelection(db, preferences: &p)
             let old = try Self.preferences(db)
-            guard p.multiUserEnabled || old.currentUserID == nil || p.currentUserID == old.currentUserID else { throw StudyError.invalid("请先开启多用户模式。") }
+            guard old.currentUserID == nil || old.scope == p.scope else { throw StudyError.scopeChanged }
             if let asset = p.wallpaperAssetID, try Int.fetchOne(db, sql: "SELECT count(*) FROM assets WHERE id=?", arguments: [asset]) != 1 { throw StudyError.notFound }
             for (user, asset) in p.profileAvatars {
                 guard try Int.fetchOne(db,sql: "SELECT count(*) FROM users WHERE id=?",arguments: [user]) == 1,

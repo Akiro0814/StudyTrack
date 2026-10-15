@@ -102,7 +102,7 @@ struct ProfileAppearanceView: View {
                 if model.avatar != nil { Button("移除头像",role: .destructive) { remove = true } }
             }
             Section("怎么称呼你") { TextField("姓名或昵称",text: $name).textContentType(.nickname).accessibilityIdentifier("profile.name"); InlineError(message: failure) }
-            Section { Text("头像只保存在本机，并包含在完整备份中。每个用户档案拥有独立头像。").font(.caption).foregroundStyle(.secondary) }
+            Section { Text("每个用户档案拥有独立头像。头像保存在本机，也会随完整备份或 iCloud 备份保存。").font(.caption).foregroundStyle(.secondary) }
         }.studyCanvas().navigationTitle("个人资料").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) {
                 Button("保存") {

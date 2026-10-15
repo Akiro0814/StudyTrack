@@ -39,6 +39,8 @@ final class AppModel {
     private var loadedAvatarID: String?
     private var loadedWallpaperID: String?
     private var loadedWallpaperRevision = -1
+    private var pendingPreferences: Preferences?
+    private var savingPreferences = false
     var accent: Color {
         if let rgb = RGBColor.parse(preferences.accent) { return Color(red: Double(rgb.red)/255,green: Double(rgb.green)/255,blue: Double(rgb.blue)/255) }
         switch preferences.accent {
@@ -112,7 +114,17 @@ final class AppModel {
         }
     }
     func savePreferences(_ value: Preferences) async {
-        _ = await perform { try await store?.updatePreferences(value) }
+        pendingPreferences = value
+        guard !savingPreferences else { return }
+        savingPreferences = true; defer { savingPreferences = false }
+        while let next = pendingPreferences {
+            pendingPreferences = nil
+            do {
+                guard next.scope == scope else { throw StudyError.scopeChanged }
+                try await store?.updatePreferences(next)
+                try await reload()
+            } catch { self.error = friendly(error) }
+        }
     }
     func friendly(_ error: Error) -> String {
         if let error = error as? StudyError { return error.localizedDescription }
