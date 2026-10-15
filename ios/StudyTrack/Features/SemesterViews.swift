@@ -23,12 +23,16 @@ struct SemestersView: View {
             } header: { Text(model.currentStage?.label ?? "待归类学期") }
               footer: { Text("这里只切换当前学习阶段的学期。其他阶段和旧学期归类请前往设置中的“学习阶段”。") }
             Section {
-                Button("开启下一学期",systemImage: "calendar.badge.plus") { advance() }.accessibilityIdentifier("semester.next")
                 if let next = model.nextSchoolTerm {
                     Text("下一学期：\(next.label)。继承本阶段最近学期的科目和满分，成绩独立保存。").font(.caption).foregroundStyle(.secondary)
-                }
+                } else { Text("本阶段学期全部创建后，开启下一学期前会询问是否进入下一学习阶段。").font(.caption).foregroundStyle(.secondary) }
             }
         }.studyCanvas().navigationTitle("切换学期").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("开启下一学期") { advance() }.accessibilityIdentifier("semester.next")
+                }
+            }
             .confirmationDialog("删除学期？仅允许删除非当前且没有科目的学期。",isPresented: $confirmDelete,titleVisibility: .visible) {
                 Button("删除学期",role: .destructive) {
                     guard let semester = deleting else { return }
