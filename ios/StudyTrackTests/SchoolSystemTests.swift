@@ -1,5 +1,7 @@
 import XCTest
+#if !canImport(UIKit)
 import GRDB
+#endif
 @testable import StudyTrackCore
 
 final class SchoolSystemTests: XCTestCase {
@@ -30,6 +32,9 @@ final class SchoolSystemTests: XCTestCase {
         XCTAssertEqual(timeline.plotted.map(\.exam.score).max(),9900)
         XCTAssertEqual(data.groups[0].summary.count,600)
     }
+    // Raw GRDB fixture preparation belongs to the standalone package test target.
+    // Hosted iOS tests consume StudyTrackCore through the app's linked binary.
+    #if !canImport(UIKit)
     func testUpgradeFromV1KeepsIDsAndRecords() async throws {
         let path = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
         defer { try? FileManager.default.removeItem(atPath: path) }
@@ -50,6 +55,7 @@ final class SchoolSystemTests: XCTestCase {
         let archived = try await upgraded.snapshot()
         XCTAssertNotNil(archived.subjects.first?.lineageID)
     }
+    #endif
     func testCustomColorAndAppearanceRoundTrip() throws {
         XCTAssertEqual(RGBColor.parse("#aB12fF")?.hex,"#AB12FF")
         XCTAssertNil(RGBColor.parse("#12GH00"))
