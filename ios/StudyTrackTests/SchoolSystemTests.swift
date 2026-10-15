@@ -3,6 +3,19 @@ import GRDB
 @testable import StudyTrackCore
 
 final class SchoolSystemTests: XCTestCase {
+    func testClassifyingLegacyTermJoinsUnambiguousSubjectHistory() async throws {
+        let store = try StudyStore(path: ":memory:")
+        let legacy = try await store.createUser(name: "学生",semester: "2026 秋")
+        let oldSubject = try await store.saveSubject(id: nil,name: "数学",fullScore: 10000,scope: legacy)
+        let nextID = try await store.saveSchoolSemester(term: SchoolTerm(stage: .high,year: 1,half: 2),userID: legacy.userID)
+        let nextScope = StudyScope(userID: legacy.userID,semesterID: nextID)
+        let newSubject = try await store.saveSubject(id: nil,name: "数学",fullScore: 10000,scope: nextScope)
+        XCTAssertNotEqual(oldSubject.lineageID,newSubject.lineageID)
+        _ = try await store.saveSchoolSemester(id: legacy.semesterID,term: SchoolTerm(stage: .high,year: 1,half: 1),userID: legacy.userID)
+        let result = try await store.analysis(scope: legacy,wholeStage: true)
+        XCTAssertEqual(result.groups.count,1)
+        XCTAssertEqual(result.subjects.count,2)
+    }
     func testMultiSubjectTimelineSeparatesSameDayAndBoundsRendering() async throws {
         let store = try StudyStore(path: ":memory:")
         let scope = try await store.createProfile(name: "学生",term: SchoolTerm(stage: .high,year: 1,half: 1),avatar: nil)

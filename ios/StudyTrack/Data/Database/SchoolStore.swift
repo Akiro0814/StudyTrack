@@ -81,6 +81,13 @@ extension StudyStore {
                 guard db.changesCount == 1 else { throw StudyError.notFound }
             }
             try Self.setTerm(db, semesterID: key, userID: userID, term: term)
+            if id != nil {
+                // Previously unclassified semesters could not share identities at migration time.
+                for row in try Row.fetchAll(db,sql: "SELECT id,normalized_name FROM subjects WHERE semester_id=? AND user_id=?",arguments: [key,userID]) {
+                    let matches = try String.fetchAll(db,sql: "SELECT DISTINCT l.lineage_id FROM subjects s JOIN subject_lineage l ON l.subject_id=s.id JOIN semester_school t ON t.semester_id=s.semester_id WHERE s.user_id=? AND t.stage=? AND s.semester_id<>? AND s.normalized_name=?",arguments: [userID,term.stage.rawValue,key,row["normalized_name"] as String])
+                    if matches.count == 1 { try db.execute(sql: "UPDATE subject_lineage SET lineage_id=? WHERE subject_id=?",arguments: [matches[0],row["id"] as String]) }
+                }
+            }
             if id == nil {
                 let candidates = try Row.fetchAll(db, sql: "SELECT * FROM semester_school WHERE user_id=? AND stage=? AND semester_id<>?", arguments: [userID,term.stage.rawValue,key])
                 let source = candidates.sorted { a,b in
