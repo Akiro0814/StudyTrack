@@ -361,11 +361,19 @@
           ]
         },
         "accent": {
-          "enum": [
-            "blue",
-            "green",
-            "orange",
-            "purple"
+          "anyOf": [
+            {
+              "enum": [
+                "blue",
+                "green",
+                "orange",
+                "purple"
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            }
           ]
         },
         "wallpaperAssetID": {
