@@ -15,7 +15,7 @@ final class AppExperienceTests: XCTestCase {
         try await first.upload(Data("persisted backup".utf8))
         let reopened = CloudBackupService(bookmarkKey: key)
         let destination = try await reopened.destination()
-        XCTAssertEqual(destination?.url.resolvingSymlinksInPath(),root.resolvingSymlinksInPath())
+        XCTAssertEqual(destination?.url.resolvingSymlinksInPath().path,root.resolvingSymlinksInPath().path)
         let list = try await reopened.list()
         XCTAssertEqual(list.count,1)
         let bytes = try await reopened.download(list[0])

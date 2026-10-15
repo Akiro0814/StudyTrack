@@ -65,9 +65,11 @@ actor CloudBackupService {
         }
         let urls = Set(originals + discovered.filter { $0.deletingLastPathComponent().standardizedFileURL == directory.standardizedFileURL })
         return try urls.filter { $0.pathExtension.lowercased() == "studytrackbackup" }.map { url in
-            let values = try url.resourceValues(forKeys: [.contentModificationDateKey,.isUbiquitousItemKey,.ubiquitousItemIsUploadedKey,.ubiquitousItemDownloadingStatusKey,.ubiquitousItemUploadingErrorKey])
+            let placeholder = directory.appendingPathComponent(".\(url.lastPathComponent).icloud")
+            let metadataURL = FileManager.default.fileExists(atPath: url.path) || !FileManager.default.fileExists(atPath: placeholder.path) ? url : placeholder
+            let values = try metadataURL.resourceValues(forKeys: [.contentModificationDateKey,.isUbiquitousItemKey,.ubiquitousItemIsUploadedKey,.ubiquitousItemDownloadingStatusKey,.ubiquitousItemUploadingErrorKey])
             if let error = values.ubiquitousItemUploadingError { throw error }
-            let cloud = values.isUbiquitousItem == true
+            let cloud = location.isCloud || values.isUbiquitousItem == true
             return CloudBackupFile(url: url,modified: values.contentModificationDate ?? .distantPast,uploaded: values.ubiquitousItemIsUploaded ?? false,downloaded: !cloud || values.ubiquitousItemDownloadingStatus == .current,isCloud: cloud)
         }.sorted { $0.modified > $1.modified }
     }

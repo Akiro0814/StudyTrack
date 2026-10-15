@@ -62,8 +62,8 @@ struct CloudBackupView: View {
                 query.predicate = NSPredicate(format: "%K ENDSWITH %@",NSMetadataItemFSNameKey,".studytrackbackup")
                 query.start(); await refresh()
             }
-            .onReceive(NotificationCenter.default.publisher(for: .NSMetadataQueryDidFinishGathering,object: query)) { _ in Task { await refresh() } }
-            .onReceive(NotificationCenter.default.publisher(for: .NSMetadataQueryDidUpdate,object: query)) { _ in Task { await refresh() } }
+            .onReceive(NotificationCenter.default.publisher(for: .NSMetadataQueryDidFinishGathering,object: query)) { _ in if !working { Task { await refresh() } } }
+            .onReceive(NotificationCenter.default.publisher(for: .NSMetadataQueryDidUpdate,object: query)) { _ in if !working { Task { await refresh() } } }
             .onDisappear { downloadTask?.cancel(); query.stop() }
             .sheet(isPresented: $choosingFolder) {
                 StudyDocumentPicker(mode: .folder,onSelection: { url in
@@ -86,11 +86,12 @@ struct CloudBackupView: View {
         query.disableUpdates()
         let urls = query.results.compactMap { ($0 as? NSMetadataItem)?.value(forAttribute: NSMetadataItemURLKey) as? URL }
         query.enableUpdates()
+        do { location = try await service.destination() }
+        catch { location = nil; files = []; status = error.localizedDescription; return }
+        guard location != nil else { files = []; status = "请选择 iCloud Drive 中的文件夹，即可备份与恢复。"; return }
         do {
-            location = try await service.destination()
-            guard location != nil else { files = []; status = "请选择 iCloud Drive 中的文件夹，即可备份与恢复。"; return }
             files = try await service.list(discovered: urls); status = files.isEmpty ? "备份文件夹可用，还没有备份。" : "已读取备份列表。"
-        } catch { location = nil; files = []; status = error.localizedDescription }
+        } catch { files = []; status = "暂时无法读取备份列表，请检查文件 App 的同步状态后刷新。\n" + error.localizedDescription }
     }
     func upload() async {
         working = true; defer { working = false }
