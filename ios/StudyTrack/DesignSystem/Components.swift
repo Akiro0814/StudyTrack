@@ -8,8 +8,6 @@ struct SummaryView: View {
             HStack(alignment: .top,spacing: 12) { values }
             VStack(alignment: .leading,spacing: 16) { values }
         }.padding(.vertical,4)
-        Text("平均分、最高分按原始分计算，不同满分的科目仅供参考。")
-            .font(.caption).foregroundStyle(.secondary)
     }
     @ViewBuilder var values: some View {
         metric("平均分",summary.average.map { String(format: "%.1f",$0) } ?? "—")

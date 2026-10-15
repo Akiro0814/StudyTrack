@@ -97,7 +97,12 @@ struct MultiSubjectChart: View {
                 }
                 if let selected { RuleMark(x: .value("选择",selected)).foregroundStyle(.secondary.opacity(0.5)) }
             }.chartYScale(domain: 0...Double(fullScore)/100)
-                .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { value in AxisValueLabel { if let day = value.as(Double.self) { Text(Date(timeIntervalSince1970: day*86400),format: .dateTime.month().day()).font(.caption2) } } } }
+                .chartXScale(domain: timeline.domain)
+                .chartXAxis {
+                    AxisMarks(values: timeline.axisTicks.map(\.position)) { value in
+                        AxisValueLabel { if let x = value.as(Double.self),let tick = timeline.axisTicks.first(where: { abs($0.position-x) < 0.0001 }) { Text(tick.label).font(.caption2) } }
+                    }
+                }
                 .chartXSelection(value: $selected)
                 .chartPlotStyle { plot in plot.mask(alignment: .leading) { GeometryReader { proxy in Rectangle().frame(width: proxy.size.width * reveal) } } }
                 .frame(height: 230).accessibilityIdentifier("analysis.chart")
@@ -105,7 +110,7 @@ struct MultiSubjectChart: View {
                 Text("\(group.subject.name) · \(point.exam.date.description) · \(point.exam.name) · \(Score.text(point.exam.score))分").font(.caption)
             }
             ViewThatFits { HStack { legend }; VStack(alignment: .leading) { legend } }
-            Text("按真实日期排列 · 同日考试独立显示").font(.caption).foregroundStyle(.secondary)
+            Text(timeline.axisCaption).font(.caption).foregroundStyle(.secondary)
         }.studySurface().task(id: timeline.all.map(\.id)) {
             reveal = reduceMotion ? 1 : 0
             guard !reduceMotion else { return }

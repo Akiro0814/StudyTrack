@@ -35,7 +35,10 @@ public actor StudyStore: ExamRepository {
         }
     }
     static func id() -> String { UUID().uuidString.lowercased() }
-    static func now() -> String { ISO8601DateFormatter().string(from: Date()) }
+    static func now() -> String {
+        let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime,.withFractionalSeconds]
+        return formatter.string(from: Date())
+    }
     static func json<T: Encodable>(_ value: T) throws -> String { String(decoding: try JSONEncoder().encode(value), as: UTF8.self) }
     static func decode<T: Decodable>(_ type: T.Type, _ text: String) throws -> T { try JSONDecoder().decode(type, from: Data(text.utf8)) }
     static func name(_ text: String) throws -> String {
