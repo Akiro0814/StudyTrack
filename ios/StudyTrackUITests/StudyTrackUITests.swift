@@ -8,11 +8,29 @@ final class StudyTrackUITests: XCTestCase {
         app.buttons["guide.skip"].tap()
         XCTAssertTrue(app.textFields["onboarding.name"].waitForExistence(timeout: 5))
     }
+    @MainActor func testSettingsSeparatesStageFromSemester() throws {
+        let app = XCUIApplication(); app.launchArguments = ["-uitesting-showcase"]; app.launch()
+        XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 15))
+        app.tabBars.buttons["设置"].tap()
+        app.buttons["settings.semesters"].tap()
+        XCTAssertTrue(app.buttons["semester.next"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["大学阶段"].exists)
+        app.buttons["semester.next"].tap()
+        XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 10))
+        app.tabBars.buttons["设置"].tap()
+        app.buttons["settings.stages"].tap()
+        XCTAssertTrue(app.buttons["stage.university"].waitForExistence(timeout: 5))
+        snapshot(app,"11-learning-stages")
+        app.buttons["stage.university"].tap()
+        XCTAssertTrue(app.buttons["开启大学阶段"].waitForExistence(timeout: 5))
+        app.buttons["开启大学阶段"].tap()
+        XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 10))
+    }
     @MainActor func testRecentScoreSwipesLeftWithoutOpeningEditor() throws {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting-showcase"]; app.launch()
         XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 15))
         for _ in 0..<5 {
-            if app.staticTexts["阶段练习 5"].matching(NSPredicate(format: "isHittable == true")).count > 1 { break }
+            if app.staticTexts["阶段练习 4"].isHittable { break }
             app.swipeUp()
         }
         let row = app.staticTexts["阶段练习 4"].firstMatch
