@@ -26,6 +26,8 @@ while IFS= read -r device_type; do
   test_selection=()
   if [ "${STUDYTRACK_TEST_TARGET:-all}" = "unit" ]; then
     test_selection=(-only-testing:StudyTrackTests)
+  elif [ "${STUDYTRACK_TEST_TARGET:-all}" = "unit-xlsx" ]; then
+    test_selection=(-only-testing:StudyTrackTests -only-testing:StudyTrackUITests/StudyTrackUITests/testNativeDocumentPickerSelectsAndImportsXLSX)
   fi
   xcodebuild test "${test_selection[@]}" -onlyUsePackageVersionsFromResolvedFile -clonedSourcePackagesDirPath .spm -project StudyTrack.xcodeproj -scheme StudyTrack -destination "platform=iOS Simulator,id=$udid" -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 -test-timeouts-enabled YES -default-test-execution-time-allowance 90 -maximum-test-execution-time-allowance 180 -resultBundlePath "../artifacts/$udid.xcresult" -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO 2>&1 | tee "../artifacts/$udid-xcodebuild.log"
   xcrun simctl io "$udid" screenshot "../artifacts/$udid.png"

@@ -12,8 +12,8 @@ final class StudyTrackUITests: XCTestCase {
         snapshot(app,"12-native-xlsx-selectable")
         XCTAssertTrue(file.isEnabled); file.tap()
         XCTAssertTrue(app.buttons["导入 .xlsx"].waitForExistence(timeout: 10))
-        reveal(app.staticTexts["导入预览"],in: app)
-        XCTAssertTrue(app.staticTexts["导入预览"].waitForExistence(timeout: 15))
+        reveal(app.buttons["取消预览"],in: app)
+        XCTAssertTrue(app.buttons["取消预览"].waitForExistence(timeout: 15))
         snapshot(app,"13-native-xlsx-import-preview")
     }
     @MainActor func testFirstLaunchShowsSkippableGuide() throws {

@@ -5,7 +5,7 @@ on:
       test_target:
         description: 'Run all tests or recheck hosted unit tests after a test-only change'
         type: choice
-        options: [all, unit]
+        options: [all, unit, unit-xlsx]
         default: all
   pull_request:
     paths: ['ios/**', 'shared-spec/**', '.github/workflows/ios-*.yml']
