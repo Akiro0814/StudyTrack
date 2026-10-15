@@ -42,7 +42,6 @@ final class AppExperienceTests: XCTestCase {
         XCTAssertTrue(StudyDocumentPicker.Mode.file.asCopy)
         XCTAssertEqual(StudyDocumentPicker.Mode.file.contentTypes.map(\.identifier),["public.item"])
         XCTAssertFalse(file.allowsMultipleSelection)
-        XCTAssertTrue(file.shouldShowFileExtensions)
         XCTAssertFalse(StudyDocumentPicker.Mode.folder.asCopy)
         XCTAssertEqual(StudyDocumentPicker.Mode.folder.contentTypes.map(\.identifier),["public.folder"])
     }

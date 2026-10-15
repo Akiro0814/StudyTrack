@@ -1,6 +1,12 @@
 name: iOS CI
 on:
   workflow_dispatch:
+    inputs:
+      test_target:
+        description: 'Run all tests or recheck hosted unit tests after a test-only change'
+        type: choice
+        options: [all, unit]
+        default: all
   pull_request:
     paths: ['ios/**', 'shared-spec/**', '.github/workflows/ios-*.yml']
   push:
@@ -29,6 +35,7 @@ jobs:
     timeout-minutes: 30
     env:
       STUDYTRACK_DEVICE_TYPE: ${{ matrix.device_type }}
+      STUDYTRACK_TEST_TARGET: ${{ inputs.test_target || 'all' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
