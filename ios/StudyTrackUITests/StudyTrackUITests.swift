@@ -1,6 +1,35 @@
 import XCTest
 
 final class StudyTrackUITests: XCTestCase {
+    @MainActor func testFirstLaunchShowsSkippableGuide() throws {
+        let app = XCUIApplication(); app.launchArguments = ["-uitesting"]; app.launch()
+        XCTAssertTrue(app.buttons["guide.skip"].waitForExistence(timeout: 15))
+        snapshot(app,"09-first-launch-guide")
+        app.buttons["guide.skip"].tap()
+        XCTAssertTrue(app.textFields["onboarding.name"].waitForExistence(timeout: 5))
+    }
+    @MainActor func testRecentScoreSwipesLeftWithoutOpeningEditor() throws {
+        let app = XCUIApplication(); app.launchArguments = ["-uitesting-showcase"]; app.launch()
+        XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 15))
+        for _ in 0..<5 {
+            if app.staticTexts["阶段练习 5"].matching(NSPredicate(format: "isHittable == true")).count > 1 { break }
+            app.swipeUp()
+        }
+        let row = app.staticTexts["阶段练习 4"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.swipeLeft()
+        XCTAssertFalse(app.textFields["exam.score"].exists)
+        let delete = app.buttons["删除成绩"].firstMatch
+        XCTAssertTrue(delete.waitForExistence(timeout: 3))
+        snapshot(app,"10-recent-left-swipe")
+        delete.tap()
+        XCTAssertTrue(app.buttons["撤销"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.textFields["exam.score"].exists)
+        app.buttons["撤销"].tap()
+        XCTAssertTrue(app.staticTexts["阶段练习 4"].waitForExistence(timeout: 5))
+        app.staticTexts["阶段练习 4"].firstMatch.tap()
+        XCTAssertTrue(app.textFields["exam.score"].waitForExistence(timeout: 5))
+    }
     @MainActor func testExperienceWithWallpaperAndSameDayExams() throws {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting-showcase"]; app.launch()
         XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 15))
@@ -34,6 +63,7 @@ final class StudyTrackUITests: XCTestCase {
     }
     @MainActor func testFirstRecordGuidesThroughSubjectAndContinuesToExam() throws {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting"]; app.launch()
+        if app.buttons["guide.skip"].waitForExistence(timeout: 2) { app.buttons["guide.skip"].tap() }
         let name = app.textFields["onboarding.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 15)); name.tap(); name.typeText("Student\n")
         for _ in 0..<4 { if app.buttons["onboarding.start"].isHittable { break }; app.swipeUp() }
@@ -50,6 +80,7 @@ final class StudyTrackUITests: XCTestCase {
     }
     @MainActor func testOnboardingAndSubjectCreation() throws {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting"]; app.launch()
+        if app.buttons["guide.skip"].waitForExistence(timeout: 2) { app.buttons["guide.skip"].tap() }
         let name = app.textFields["onboarding.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 15)); name.tap(); name.typeText("Student\n")
         for _ in 0..<4 { if app.buttons["onboarding.start"].isHittable { break }; app.swipeUp() }
