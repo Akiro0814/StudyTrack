@@ -16,13 +16,17 @@ extension StudyStore {
             guard try Int.fetchOne(db,sql: "SELECT count(*) FROM semesters WHERE id=? AND user_id=?",arguments: [scope.semesterID,scope.userID]) == 1 else { throw StudyError.notFound }
             let defaultName = try String.fetchOne(db,sql: "SELECT name FROM semesters WHERE id=?",arguments: [scope.semesterID])!
             var semesters: [String: String] = [:], subjects: [String: (String,Int64)] = [:]
-            for r in try Row.fetchAll(db,sql: "SELECT * FROM semesters WHERE user_id=?",arguments: [scope.userID]) { semesters[r["normalized_name"]] = r["id"] }
+            for r in try Row.fetchAll(db,sql: "SELECT * FROM semesters WHERE user_id=?",arguments: [scope.userID]) {
+                semesters[r["normalized_name"]] = r["id"]
+                if let term = try Self.readSemester(db,r).schoolTerm { semesters[term.label] = r["id"] }
+            }
             for r in try Row.fetchAll(db,sql: "SELECT * FROM subjects WHERE user_id=?",arguments: [scope.userID]) { subjects["\(r["semester_id"] as String)\u{0}\(r["normalized_name"] as String)"] = (r["id"],r["full_score_minor"]) }
             var rows: [ExchangeRow] = [], issues = parsed.issues, seen: [String: ExchangeRow] = [:]
             var duplicates = 0, conflicts = 0, newSemesters = Set<String>(), newSubjects = Set<String>()
             for original in parsed.rows {
                 var row = original
-                let semesterName = row.semester.isEmpty ? defaultName : normalize(row.semester)
+                let originalTerm = row.semester.isEmpty ? defaultName : normalize(row.semester)
+                let semesterName = SchoolTerm.recognize(originalTerm)?.label ?? originalTerm
                 guard semesterName.count <= 100, row.subject.count <= 100 else { issues.append(.init(row: row.row,reason: "学期或科目名称过长。")); continue }
                 row.semester = semesterName
                 let createsSemester = semesters[semesterName] == nil
@@ -66,7 +70,7 @@ extension StudyStore {
                   try Self.preferences(db).scope == plan.scope else { throw StudyError.scopeChanged }
             for row in plan.rows {
                 let semesterID: String
-                if let id = try String.fetchOne(db,sql: "SELECT id FROM semesters WHERE user_id=? AND normalized_name=?",arguments: [plan.scope.userID,normalize(row.semester)]) { semesterID = id }
+                if let id = try Self.semesterID(db,userID: plan.scope.userID,name: row.semester) { semesterID = id }
                 else {
                     semesterID = Self.id(); let now = Self.now()
                     try db.execute(sql: "INSERT INTO semesters VALUES(?,?,?,?,?,?)",arguments: [semesterID,plan.scope.userID,row.semester,normalize(row.semester),now,now])

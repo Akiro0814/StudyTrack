@@ -78,9 +78,11 @@ final class AppModel {
             subs = try await store.subjects(scope: scope)
             page = try await store.exams(scope: scope,filter: ExamFilter(),offset: 0,limit: 5)
         }
+        var overview = AnalysisData()
+        if let selected = p.scope { overview = try await store.analysis(scope: selected,wholeStage: false) }
         guard revision == selectionRevision else { return }
         preferences = p; users = u; semesters = terms; subjects = subs; home = page
-        if let scope = p.scope { homeAnalysis = try await store.analysis(scope: scope,wholeStage: false) }
+        homeAnalysis = overview
         dataRevision = try await store.revision()
         let avatarID = p.currentUserID.flatMap { p.avatarAssetID(for: $0) }
         if p.wallpaperAssetID != loadedWallpaperID || avatarID != loadedAvatarID || loadedWallpaperRevision != selectionRevision {

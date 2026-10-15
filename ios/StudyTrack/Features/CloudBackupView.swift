@@ -11,6 +11,7 @@ struct CloudBackupView: View {
     @State private var revision = 0
     @State private var confirming = false
     @State private var downloadTask: Task<Void,Never>?
+    @State private var query = NSMetadataQuery()
     var body: some View {
         List {
             Section {
@@ -41,11 +42,22 @@ struct CloudBackupView: View {
                 }
             }
         }.studyCanvas().navigationTitle("iCloud 云备份")
-            .task { await refresh() }
-            .onDisappear { downloadTask?.cancel() }
+            .task {
+                query.searchScopes = [NSMetadataQueryUbiquitousDocumentsScope]
+                query.predicate = NSPredicate(format: "%K ENDSWITH %@",NSMetadataItemFSNameKey,".studytrackbackup")
+                query.start(); await refresh()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .NSMetadataQueryDidFinishGathering,object: query)) { _ in Task { await refresh() } }
+            .onReceive(NotificationCenter.default.publisher(for: .NSMetadataQueryDidUpdate,object: query)) { _ in Task { await refresh() } }
+            .onDisappear { downloadTask?.cancel(); query.stop() }
             .confirmationDialog("确认恢复？将先保存本机恢复快照，再替换全部数据。",isPresented: $confirming,titleVisibility: .visible) { Button("确认替换",role: .destructive) { Task { await restore() } } }
     }
-    func refresh() async { do { files = try await service.list(); status = files.isEmpty ? "iCloud 可用，还没有备份。" : "已读取备份列表。" } catch { status = error.localizedDescription } }
+    func refresh() async {
+        query.disableUpdates()
+        let urls = query.results.compactMap { ($0 as? NSMetadataItem)?.value(forAttribute: NSMetadataItemURLKey) as? URL }
+        query.enableUpdates()
+        do { files = try await service.list(discovered: urls); status = files.isEmpty ? "iCloud 可用，还没有备份。" : "已读取备份列表。" } catch { status = error.localizedDescription }
+    }
     func upload() async {
         working = true; defer { working = false }
         do {

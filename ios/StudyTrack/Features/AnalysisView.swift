@@ -67,7 +67,9 @@ struct AnalysisView: View {
         do {
             let next = try await store.analysis(scope: scope,wholeStage: wholeStage)
             guard !Task.isCancelled, key == queryKey, scope == model.scope else { return }
-            data = next; if !next.groups.contains(where: { $0.id == groupID }) { groupID = "" }; visibleCounts = [:]; loading = false
+            data = next; if !next.groups.contains(where: { $0.id == groupID }) { groupID = "" }
+            if let route = model.analysisRoute,let id = route.subjectID,let group = next.groups.first(where: { $0.subject.id == id || $0.exams.contains(where: { $0.subjectID == id }) }) { groupID = group.id }
+            visibleCounts = [:]; loading = false
         } catch { if !Task.isCancelled, key == queryKey { failure = model.friendly(error); loading = false } }
     }
 }

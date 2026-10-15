@@ -57,7 +57,7 @@ struct PersonalizationView: View {
                 }
             }
             .confirmationDialog("恢复默认外观？",isPresented: $reset,titleVisibility: .visible) {
-                Button("恢复默认",role: .destructive) { var p = model.preferences; p.theme = "simple"; p.accent = "blue"; p.wallpaperAssetID = nil; Task { await model.savePreferences(p) } }
+                Button("恢复默认",role: .destructive) { var p = model.preferences; p.theme = "simple"; p.accent = "blue"; p.wallpaperAssetID = nil; p.displayMode = "system"; p.glassVariant = "regular"; p.glassTint = 0.08; p.glassBacking = 0.15; Task { await model.savePreferences(p) } }
             }
     }
     func theme(_ title: String,subtitle: String,symbol: String,value: String) -> some View {

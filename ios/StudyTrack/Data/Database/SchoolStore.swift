@@ -2,6 +2,11 @@ import Foundation
 import GRDB
 
 extension StudyStore {
+    static func semesterID(_ db: Database,userID: String,name: String) throws -> String? {
+        if let id = try String.fetchOne(db,sql: "SELECT id FROM semesters WHERE user_id=? AND normalized_name=?",arguments: [userID,normalize(name)]) { return id }
+        guard let term = SchoolTerm.recognize(name) else { return nil }
+        return try String.fetchOne(db,sql: "SELECT semester_id FROM semester_school WHERE user_id=? AND stage=? AND year=? AND half=?",arguments: [userID,term.stage.rawValue,term.year,term.half])
+    }
     public func restoreExam(_ exam: Exam) throws {
         try queue.write { db in
             guard try Self.preferences(db).currentUserID == exam.userID else { throw StudyError.scopeChanged }
@@ -98,13 +103,21 @@ extension StudyStore {
                 clause = "s.user_id=? AND s.semester_id IN (SELECT semester_id FROM semester_school WHERE user_id=? AND stage=?)"; args = [scope.userID,scope.userID,stage]
             }
             let arguments = StatementArguments(args)
-            let subjects = try Row.fetchAll(db, sql: "SELECT s.* FROM subjects s WHERE \(clause) ORDER BY normalized_name,id", arguments: arguments).map { try Self.readSubject(db,$0) }
-            let exams = try Row.fetchAll(db, sql: "SELECT e.* FROM exam_records e JOIN subjects s ON s.id=e.subject_id WHERE \(clause) ORDER BY e.exam_date,e.created_at,e.id", arguments: arguments).map(Self.exam)
-            let grouped = Dictionary(grouping: subjects) { "\($0.lineageID ?? $0.id)|\($0.fullScore)" }
-            let groups = grouped.map { key, values in
-                let ids = Set(values.map(\.id))
-                return AnalysisGroup(id: key, subject: values[0], exams: exams.filter { ids.contains($0.subjectID) })
-            }.sorted { $0.subject.name == $1.subject.name ? $0.subject.fullScore < $1.subject.fullScore : $0.subject.name < $1.subject.name }
+            let subjectRows = try Row.fetchAll(db, sql: "SELECT s.* FROM subjects s WHERE \(clause) ORDER BY normalized_name,id", arguments: arguments)
+            let subjects: [Subject] = try subjectRows.map { try Self.readSubject(db,$0) }
+            let examRows = try Row.fetchAll(db, sql: "SELECT e.* FROM exam_records e JOIN subjects s ON s.id=e.subject_id WHERE \(clause) ORDER BY e.exam_date,e.created_at,e.id", arguments: arguments)
+            let exams: [Exam] = try examRows.map { try Self.exam($0) }
+            let grouped: [String: [Subject]] = Dictionary(grouping: subjects) { subject in "\(subject.lineageID ?? subject.id)|\(subject.fullScore)" }
+            var groups: [AnalysisGroup] = []
+            for (key,values) in grouped {
+                let ids: Set<String> = Set(values.map { $0.id })
+                let records: [Exam] = exams.filter { ids.contains($0.subjectID) }
+                groups.append(AnalysisGroup(id: key,subject: values[0],exams: records))
+            }
+            groups.sort { lhs,rhs in
+                if lhs.subject.name == rhs.subject.name { return lhs.subject.fullScore < rhs.subject.fullScore }
+                return lhs.subject.name < rhs.subject.name
+            }
             return AnalysisData(subjects: subjects, exams: exams, groups: groups)
         }
     }

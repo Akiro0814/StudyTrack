@@ -2,6 +2,34 @@ import XCTest
 @testable import StudyTrackCore
 
 final class SchoolSystemTests: XCTestCase {
+    func testCustomColorAndAppearanceRoundTrip() throws {
+        XCTAssertEqual(RGBColor.parse("#aB12fF")?.hex,"#AB12FF")
+        XCTAssertNil(RGBColor.parse("#12GH00"))
+        XCTAssertTrue(RGBColor.parse("#FFFFFF")!.usesDarkText)
+        XCTAssertFalse(RGBColor.parse("#000000")!.usesDarkText)
+        var p = Preferences(); p.accent = "#FFFF00"; p.displayMode = "dark"; p.glassVariant = "clear"; p.glassTint = 0.3
+        let decoded = try JSONDecoder().decode(Preferences.self,from: JSONEncoder().encode(p))
+        XCTAssertEqual(decoded.displayMode,"dark"); XCTAssertEqual(decoded.glassVariant,"clear"); XCTAssertEqual(decoded.accent,"#FFFF00")
+    }
+    func testDuplicateTermRollsBackAndWidgetsRespectMultiUser() async throws {
+        let store = try StudyStore(path: ":memory:")
+        let term = SchoolTerm(stage: .high,year: 1,half: 1)
+        let first = try await store.createProfile(name: "甲",term: term,avatar: nil)
+        _ = try await store.saveSubject(id: nil,name: "数学",fullScore: 10000,scope: first)
+        do { _ = try await store.saveSchoolSemester(term: term,userID: first.userID); XCTFail("duplicate term") } catch StudyError.duplicate {}
+        let semesters = try await store.semesters(userID: first.userID); XCTAssertEqual(semesters.count,1)
+        var p = try await store.preferences(); p.multiUserEnabled = true; try await store.updatePreferences(p)
+        let second = try await store.createProfile(name: "乙",term: term,avatar: nil)
+        _ = try await store.saveSubject(id: nil,name: "物理",fullScore: 7000,scope: second)
+        p = try await store.preferences(); p.multiUserEnabled = false; try await store.updatePreferences(p)
+        let snapshot = try await store.snapshot()
+        let archive = WidgetArchive.make(snapshot)
+        XCTAssertTrue(archive.series.allSatisfy { $0.userID == second.userID })
+        XCTAssertTrue(archive.series.allSatisfy { $0.deepLink?.scheme == "studytrack" })
+        do { try await store.select(first); XCTFail("switch must fail") } catch StudyError.invalid {}
+        let restored = try BackupCodec.decode(BackupCodec.encode(snapshot,resources: [:]))
+        XCTAssertEqual(restored.snapshot.subjects.count,2)
+    }
     func testCatalogAndLegacyRecognition() throws {
         XCTAssertEqual(SchoolStage.allCases.flatMap { SchoolTerm.catalog(for: $0) }.count, 32)
         XCTAssertEqual(SchoolTerm.recognize("高一上学期"), SchoolTerm(stage: .high, year: 1, half: 1))

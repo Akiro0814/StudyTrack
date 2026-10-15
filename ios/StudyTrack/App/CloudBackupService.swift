@@ -17,9 +17,10 @@ actor CloudBackupService {
         try FileManager.default.createDirectory(at: directory,withIntermediateDirectories: true)
         return directory
     }
-    func list() throws -> [CloudBackupFile] {
+    func list(discovered: [URL] = []) throws -> [CloudBackupFile] {
         let directory = try directory()
-        let urls = try FileManager.default.contentsOfDirectory(at: directory,includingPropertiesForKeys: [.contentModificationDateKey,.ubiquitousItemIsUploadedKey,.ubiquitousItemDownloadingStatusKey],options: [])
+        let local = try FileManager.default.contentsOfDirectory(at: directory,includingPropertiesForKeys: [.contentModificationDateKey,.ubiquitousItemIsUploadedKey,.ubiquitousItemDownloadingStatusKey],options: [])
+        let urls = Set(local + discovered.filter { $0.deletingLastPathComponent().standardizedFileURL == directory.standardizedFileURL })
         return try urls.filter { $0.pathExtension == "studytrackbackup" }.map { url in
             let values = try url.resourceValues(forKeys: [.contentModificationDateKey,.ubiquitousItemIsUploadedKey,.ubiquitousItemDownloadingStatusKey,.ubiquitousItemUploadingErrorKey])
             if let error = values.ubiquitousItemUploadingError { throw error }

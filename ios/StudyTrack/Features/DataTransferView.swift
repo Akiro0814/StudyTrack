@@ -111,7 +111,7 @@ struct DataTransferView: View {
                 guard url.pathExtension.lowercased() == "xlsx" else { throw StudyError.unsupported("请先将文件转换为 .xlsx。") }
                 let parsed = try await Task.detached { try XLSXCodec.decode(data) }.value
                 let existing = try await store.semesters(userID: scope.userID)
-                let unknown = Set(parsed.rows.map(\.semester).filter { !$0.isEmpty && SchoolTerm.recognize($0) == nil && !existing.contains(where: { term in term.name == $0 }) })
+                let unknown = Set(parsed.rows.map(\.semester).filter { name in !name.isEmpty && SchoolTerm.recognize(name) == nil && !existing.contains(where: { term in term.name == name }) })
                 pendingDigest = SafeArchive.sha256(data)
                 if !unknown.isEmpty {
                     pendingWorkbook = parsed; termMappings = Dictionary(uniqueKeysWithValues: unknown.map { ($0,model.currentSemester?.schoolTerm ?? SchoolTerm(stage: .high,year: 1,half: 1)) }); mapping = true
