@@ -74,7 +74,7 @@ public actor StudyStore: ExamRepository {
     }
     public func users() throws -> [User] { try queue.read { try Row.fetchAll($0, sql: "SELECT * FROM users ORDER BY created_at,id").map(Self.user) } }
     public func semesters(userID: String) throws -> [Semester] {
-        try queue.read { db in try Row.fetchAll(db, sql: "SELECT * FROM semesters WHERE user_id=? ORDER BY created_at,id", arguments: [userID]).map { try Self.readSemester(db,$0) }.sorted { ($0.schoolTerm?.id ?? "z" + $0.name) < ($1.schoolTerm?.id ?? "z" + $1.name) } }
+        try queue.read { db in try Row.fetchAll(db, sql: "SELECT * FROM semesters WHERE user_id=? ORDER BY created_at,id", arguments: [userID]).map { try Self.readSemester(db,$0) }.sorted { ($0.schoolTerm?.sortKey ?? "z" + $0.name) < ($1.schoolTerm?.sortKey ?? "z" + $1.name) } }
     }
     public func subjects(scope: StudyScope) throws -> [Subject] {
         try queue.read { db in try Row.fetchAll(db, sql: "SELECT * FROM subjects WHERE user_id=? AND semester_id=? ORDER BY normalized_name,id", arguments: [scope.userID,scope.semesterID]).map { try Self.readSubject(db,$0) } }

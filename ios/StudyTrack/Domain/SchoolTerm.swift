@@ -13,6 +13,7 @@ public struct SchoolTerm: Codable, Hashable, Sendable, Identifiable {
     public init(stage: SchoolStage, year: Int, half: Int) { self.stage = stage; self.year = year; self.half = half }
     public var id: String { "\(stage.rawValue)-\(year)-\(half)" }
     public var order: Int { year * 2 + half }
+    public var sortKey: String { "\(SchoolStage.allCases.firstIndex(of: stage) ?? 0)-\(year)-\(half)" }
     public var valid: Bool { (1...stage.years).contains(year) && (1...2).contains(half) }
     public var label: String {
         let numbers = ["一", "二", "三", "四", "五", "六"]

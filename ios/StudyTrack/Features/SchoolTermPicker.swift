@@ -61,7 +61,7 @@ struct ProfileSetupForm: View {
                     }
                 } label: {
                     HStack { Text(onboarding ? "开启我的学迹" : "创建学习档案"); Spacer(); Image(systemName: "arrow.right") }.font(.headline).frame(maxWidth: .infinity).padding(.vertical,10)
-                }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).accessibilityIdentifier("onboarding.start")
+                }.buttonStyle(StudyPrimaryButtonStyle()).buttonBorderShape(.capsule).accessibilityIdentifier("onboarding.start")
                     .disabled(normalize(name).isEmpty || photoLoading)
                     .listRowInsets(EdgeInsets(top: 16,leading: 16,bottom: 16,trailing: 16))
             } header: { Text("从你的学习档案开始") } footer: { Text("无需注册 · 本机保存 · 支持完整备份") }

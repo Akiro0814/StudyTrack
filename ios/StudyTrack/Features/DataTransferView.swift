@@ -23,6 +23,7 @@ struct DataTransferView: View {
     @State private var pendingDigest = ""
     @State private var termMappings: [String: SchoolTerm] = [:]
     @State private var mapping = false
+    @State private var pendingScope: StudyScope?
     var body: some View {
         List {
             Section("Excel 成绩交换") {
@@ -110,6 +111,7 @@ struct DataTransferView: View {
             } else {
                 guard url.pathExtension.lowercased() == "xlsx" else { throw StudyError.unsupported("请先将文件转换为 .xlsx。") }
                 let parsed = try await Task.detached { try XLSXCodec.decode(data) }.value
+                plan = nil; pendingScope = scope
                 let existing = try await store.semesters(userID: scope.userID)
                 let unknown = Set(parsed.rows.map(\.semester).filter { name in !name.isEmpty && SchoolTerm.recognize(name) == nil && !existing.contains(where: { term in term.name == name }) })
                 pendingDigest = SafeArchive.sha256(data)
@@ -121,7 +123,7 @@ struct DataTransferView: View {
         }
     }
     func applyMappings() async {
-        guard var parsed = pendingWorkbook,let scope = model.scope else { return }
+        guard var parsed = pendingWorkbook,let scope = pendingScope,scope == model.scope else { model.error = "用户或学期已切换，请重新选择文件。"; return }
         for index in parsed.rows.indices { if let term = termMappings[parsed.rows[index].semester] { parsed.rows[index].semester = term.label } }
         if await model.perform({ plan = try await model.store?.previewImport(parsed,scope: scope,fileDigest: pendingDigest) }) { mapping = false; pendingWorkbook = nil }
     }

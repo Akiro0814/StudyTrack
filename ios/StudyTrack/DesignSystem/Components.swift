@@ -50,7 +50,7 @@ struct AddExamButton: View {
     var body: some View {
         if model.preferences.theme == "glass" && !reduceTransparency {
             Button("添加成绩",systemImage: "plus",action: action).padding(12).glassEffect(.regular.interactive(),in: .capsule)
-        } else { Button("添加成绩",systemImage: "plus",action: action).buttonStyle(.borderedProminent).controlSize(.large) }
+        } else { Button("添加成绩",systemImage: "plus",action: action).buttonStyle(StudyPrimaryButtonStyle()).controlSize(.large) }
     }
 }
 struct InlineError: View {

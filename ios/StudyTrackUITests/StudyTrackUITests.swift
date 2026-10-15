@@ -36,6 +36,7 @@ final class StudyTrackUITests: XCTestCase {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting"]; app.launch()
         let name = app.textFields["onboarding.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 15)); name.tap(); name.typeText("Student\n")
+        for _ in 0..<4 { if app.buttons["onboarding.start"].isHittable { break }; app.swipeUp() }
         app.buttons["onboarding.start"].tap()
         let add = app.buttons["home.add"]
         XCTAssertTrue(add.waitForExistence(timeout: 10)); XCTAssertTrue(add.isEnabled); add.tap()
@@ -51,6 +52,7 @@ final class StudyTrackUITests: XCTestCase {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting"]; app.launch()
         let name = app.textFields["onboarding.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 15)); name.tap(); name.typeText("Student\n")
+        for _ in 0..<4 { if app.buttons["onboarding.start"].isHittable { break }; app.swipeUp() }
         app.buttons["onboarding.start"].tap()
         XCTAssertTrue(app.tabBars.buttons["科目"].waitForExistence(timeout: 10))
         app.tabBars.buttons["科目"].tap(); app.buttons["subjects.add"].tap()

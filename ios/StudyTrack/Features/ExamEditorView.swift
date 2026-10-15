@@ -29,6 +29,8 @@ struct ExamEditorView: View {
     @State private var loaded = false
     @State private var showingRanks = false
     @State private var draftTask: Task<Void, Never>?
+    @State private var availableSubjects: [Subject] = []
+    @State private var selectionAtOpen: StudyScope?
     @FocusState private var field: String?
     var key: String { "exam:\(scope.userID):\(scope.semesterID):\(existing?.id ?? "new")" }
     var dirty: Bool { draft != original }
@@ -38,9 +40,9 @@ struct ExamEditorView: View {
                 Section("考试") {
                     Picker("科目",selection: $draft.subjectID) {
                         Text("请选择").tag("")
-                        ForEach(model.subjects) { Text($0.name).tag($0.id) }
+                        ForEach(availableSubjects) { Text($0.name).tag($0.id) }
                     }
-                    if model.subjects.isEmpty { NavigationLink("先添加科目") { SubjectEditorView(scope: scope,subject: nil) } }
+                    if availableSubjects.isEmpty { NavigationLink("先添加科目") { SubjectEditorView(scope: scope,subject: nil) } }
                     Picker("类型",selection: $draft.type) { ForEach(ExamType.allCases,id: \.self) { Text($0.label).tag($0) } }
                     TextField("考试名称（留空使用类型名称）",text: $draft.name).focused($field,equals: "name").submitLabel(.next).onSubmit { field = "score" }
                     DatePicker("日期",selection: $draft.date,displayedComponents: .date)
@@ -50,7 +52,7 @@ struct ExamEditorView: View {
                         TextField("分数",text: $draft.score).font(.system(.largeTitle,design: .rounded,weight: .bold)).keyboardType(.decimalPad).focused($field,equals: "score").accessibilityIdentifier("exam.score")
                         Text("分").foregroundStyle(.secondary)
                     }.padding(.vertical,12)
-                    if let subject = model.subjects.first(where: { $0.id == draft.subjectID }) { Text("满分 \(Score.text(subject.fullScore))").font(.caption).foregroundStyle(.secondary) }
+                    if let subject = availableSubjects.first(where: { $0.id == draft.subjectID }) { Text("满分 \(Score.text(subject.fullScore))").font(.caption).foregroundStyle(.secondary) }
                 }
                 Section {
                     DisclosureGroup("补充排名（可选）",isExpanded: $showingRanks) {
@@ -64,7 +66,7 @@ struct ExamEditorView: View {
             }.studyCanvas().navigationTitle(existing == nil ? "添加成绩" : "编辑成绩").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("取消") { if dirty { discard = true } else { dismiss() } } }
-                    ToolbarItem(placement: .confirmationAction) { Button("保存") { Task { await save() } }.disabled(model.busy).accessibilityIdentifier("exam.save") }
+                    ToolbarItem(placement: .confirmationAction) { Button("保存") { Task { await save() } }.disabled(model.busy || !loaded).accessibilityIdentifier("exam.save") }
                     ToolbarItemGroup(placement: .keyboard) {
                         Button("下一项") { let fields = showingRanks ? ["name","score","class","grade","district","reflection"] : ["name","score","reflection"]; let i = fields.firstIndex(of: field ?? "") ?? -1; field = fields[(i+1)%fields.count] }
                         Spacer(); Button("完成") { field = nil }
@@ -78,8 +80,10 @@ struct ExamEditorView: View {
                     Button("丢弃草稿",role: .destructive) { recovered = nil; Task { try? await model.store?.setDraft(key: key,data: nil) } }
                 }
         }.task {
+            selectionAtOpen = model.scope
+            do { availableSubjects = try await model.store?.subjects(scope: scope) ?? [] } catch { failure = model.friendly(error); return }
             draft = existing.map(ExamDraft.init) ?? ExamDraft()
-            if existing == nil, let subject = model.subjects.first { draft.subjectID = subject.id }
+            if existing == nil, let subject = availableSubjects.first { draft.subjectID = subject.id }
             showingRanks = !draft.classRank.isEmpty || !draft.gradeRank.isEmpty || !draft.districtRank.isEmpty
             original = draft
             if let data = try? await model.store?.draft(key: key), let saved = try? JSONDecoder().decode(ExamDraft.self,from: data) { recovered = saved }
@@ -93,7 +97,7 @@ struct ExamEditorView: View {
     }
     func save() async {
         do {
-            guard model.scope == scope else { throw StudyError.scopeChanged }
+            guard model.scope == selectionAtOpen,scope.userID == model.scope?.userID else { throw StudyError.scopeChanged }
             let input = try draft.input(id: existing?.id)
             draftTask?.cancel()
             if await model.perform(onError: { failure = $0; field = "score" }, { _ = try await model.store?.saveExams([input],scope: scope); try await model.store?.setDraft(key: key,data: nil) }) { loaded = false; original = draft; dismiss() }

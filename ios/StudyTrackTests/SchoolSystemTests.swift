@@ -1,7 +1,28 @@
 import XCTest
+import GRDB
 @testable import StudyTrackCore
 
 final class SchoolSystemTests: XCTestCase {
+    func testUpgradeFromV1KeepsIDsAndRecords() async throws {
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        let store = try StudyStore(path: path)
+        let scope = try await store.createUser(name: "旧档案",semester: "高一上学期")
+        let subject = try await store.saveSubject(id: nil,name: "数学",fullScore: 10000,scope: scope)
+        let exams = try await store.saveExams([ExamInput(subjectID: subject.id,name: "旧成绩",date: LocalDate("2026-10-01"),score: 8500)],scope: scope)
+        let queue = try DatabaseQueue(path: path)
+        try queue.write { db in
+            try db.execute(sql: "DROP TABLE subject_lineage; DROP TABLE semester_school; DELETE FROM grdb_migrations WHERE identifier='v2-school-system'")
+        }
+        let upgraded = try StudyStore(path: path)
+        let terms = try await upgraded.semesters(userID: scope.userID)
+        XCTAssertEqual(terms[0].id,scope.semesterID)
+        XCTAssertEqual(terms[0].schoolTerm,SchoolTerm(stage: .high,year: 1,half: 1))
+        let rows = try await upgraded.exams(scope: scope,filter: ExamFilter())
+        XCTAssertEqual(rows.rows.first?.id,exams.first?.id)
+        let archived = try await upgraded.snapshot()
+        XCTAssertNotNil(archived.subjects.first?.lineageID)
+    }
     func testCustomColorAndAppearanceRoundTrip() throws {
         XCTAssertEqual(RGBColor.parse("#aB12fF")?.hex,"#AB12FF")
         XCTAssertNil(RGBColor.parse("#12GH00"))

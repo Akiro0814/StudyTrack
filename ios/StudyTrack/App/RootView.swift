@@ -26,6 +26,11 @@ struct RootView: View {
         .disabled(model.busy)
         .onOpenURL { url in Task { await model.openWidget(url) } }
         .onChange(of: model.analysisRoute) { _,value in if value != nil { selectedTab = 2 } }
+        .task(id: model.recentlyDeleted?.id) {
+            guard let id = model.recentlyDeleted?.id else { return }
+            do { try await Task.sleep(for: .seconds(8)); try Task.checkCancellation() } catch { return }
+            if model.recentlyDeleted?.id == id { model.recentlyDeleted = nil }
+        }
         .preferredColorScheme(model.preferences.displayMode == "light" ? .light : model.preferences.displayMode == "dark" ? .dark : nil)
         .safeAreaInset(edge: .bottom) {
             if model.recentlyDeleted != nil {

@@ -100,7 +100,7 @@ struct EmptyStudyView: View {
                 .frame(width: 72,height: 72).background(.tint.opacity(0.10),in: RoundedRectangle(cornerRadius: 24))
             Text(title).font(.title3.bold())
             Text(message).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            Button(actionTitle,action: action).buttonStyle(.borderedProminent).controlSize(.large)
+            Button(actionTitle,action: action).buttonStyle(StudyPrimaryButtonStyle()).controlSize(.large)
         }.frame(maxWidth: .infinity).padding(.vertical,24).studySurface()
     }
 }

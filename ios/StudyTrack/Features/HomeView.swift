@@ -51,7 +51,7 @@ struct HomeView: View {
                 }
                 Button { recording = .single } label: {
                     Label("添加成绩",systemImage: "plus").font(.headline).frame(maxWidth: .infinity).padding(.vertical,6)
-                }.buttonStyle(.borderedProminent).controlSize(.large).buttonBorderShape(.capsule).accessibilityIdentifier("home.add")
+                }.buttonStyle(StudyPrimaryButtonStyle()).controlSize(.large).buttonBorderShape(.capsule).accessibilityIdentifier("home.add")
                 Button { recording = .batch } label: {
                     Label("一次考试，多科录入",systemImage: "square.stack.3d.up").font(.subheadline).frame(maxWidth: .infinity,minHeight: 36)
                 }
@@ -61,7 +61,8 @@ struct HomeView: View {
                 ForEach(model.homeAnalysis.groups) { group in
                     VStack(alignment: .leading,spacing: 14) {
                         SectionHeading(title: group.subject.name,detail: "满分 \(Score.text(group.subject.fullScore))")
-                        SummaryView(summary: group.summary)
+                        if group.summary.count == 0 { Text("暂无记录").font(.subheadline).foregroundStyle(.secondary) }
+                        else { SummaryView(summary: group.summary) }
                     }.studySurface()
                 }
             }

@@ -136,7 +136,7 @@ struct AboutView: View {
     var body: some View {
         List {
             Section { HStack(spacing: 16) { BrandMark(size: 64); VStack(alignment: .leading,spacing: 6) { Text("学迹 StudyTrack").font(.title2.bold()); Text(AppVersion.text).font(.caption).foregroundStyle(.secondary) } }.padding(.vertical,12); Text("离线成绩记录与分析 · 让每次努力都有迹可循") }
-            Section("隐私") { Text("成绩、用户档案、备注与壁纸保存在本机。应用不接入广告、网络账号或分析服务。导出文件包含个人信息，完整备份默认未加密，请自行保管。") }
+            Section("隐私") { Text("成绩、用户档案、备注与壁纸默认保存在本机。主动使用 iCloud 备份后，完整备份会存入你的 iCloud Drive。应用不接入广告或分析服务。导出文件包含个人信息，完整备份默认未加密，请自行保管。") }
             Section("支持") { Text("如需反馈问题，请附上应用版本和重现步骤，避免公开真实姓名与成绩。"); Link("项目主页",destination: URL(string: "https://github.com/L1angK1NG/StudyTrack")!) }
             Section("开源组件") {
                 Text("GRDB.swift · MIT\nZIPFoundation · MIT\nSwift Crypto · Apache 2.0（仅跨平台测试）")

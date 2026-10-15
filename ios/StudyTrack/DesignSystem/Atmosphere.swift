@@ -1,5 +1,22 @@
 import SwiftUI
 import UIKit
+import StudyTrackCore
+
+struct StudyPrimaryButtonStyle: ButtonStyle {
+    @Environment(AppModel.self) private var model
+    @Environment(\.isEnabled) private var enabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.padding(.horizontal,16).padding(.vertical,10)
+            .foregroundStyle(darkText ? Color.black : Color.white)
+            .background(model.accent,in: Capsule()).opacity(enabled ? 1 : 0.4)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+    }
+    var darkText: Bool {
+        var r: CGFloat = 0,g: CGFloat = 0,b: CGFloat = 0,a: CGFloat = 0
+        UIColor(model.accent).getRed(&r,green: &g,blue: &b,alpha: &a)
+        return RGBColor(red: Int(r*255),green: Int(g*255),blue: Int(b*255)).usesDarkText
+    }
+}
 
 extension UIImage {
     /// Sample the visible central content area; a protective scrim handles mixed photos.
