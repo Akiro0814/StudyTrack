@@ -1,6 +1,19 @@
 import XCTest
 
 final class StudyTrackUITests: XCTestCase {
+    @MainActor func testNativeDocumentPickerSelectsAndImportsXLSX() throws {
+        let app = XCUIApplication(); app.launchArguments = ["-uitesting-showcase"]; app.launch()
+        XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 15))
+        app.tabBars.buttons["设置"].tap()
+        reveal(app.buttons["settings.data"],in: app); app.buttons["settings.data"].tap()
+        app.buttons["导入 .xlsx"].tap()
+        let file = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@","StudyTrack Import Test")).firstMatch
+        XCTAssertTrue(file.waitForExistence(timeout: 10))
+        snapshot(app,"12-native-xlsx-selectable")
+        XCTAssertTrue(file.isEnabled); file.tap()
+        XCTAssertTrue(app.staticTexts["导入预览"].waitForExistence(timeout: 15))
+        snapshot(app,"13-native-xlsx-import-preview")
+    }
     @MainActor func testFirstLaunchShowsSkippableGuide() throws {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting"]; app.launch()
         XCTAssertTrue(app.buttons["guide.skip"].waitForExistence(timeout: 15))

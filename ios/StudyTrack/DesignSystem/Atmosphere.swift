@@ -73,12 +73,13 @@ struct SwipeDeleteRow<Content: View>: View {
 /// Direction is decided before the recognizer begins, so vertical scrolling is
 /// left to the parent scroll view. A tap explicitly waits for the pan to fail.
 private struct ScoreRowGestures: UIViewRepresentable {
+    @Environment(\.isEnabled) private var enabled
     var tap: () -> Void
     var drag: (CGFloat) -> Void
     var end: (Bool) -> Void
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeUIView(context: Context) -> UIView {
-        let view = UIView(); view.backgroundColor = .clear
+        let view = UIView(); view.backgroundColor = .clear; view.isUserInteractionEnabled = enabled
         let pan = UIPanGestureRecognizer(target: context.coordinator,action: #selector(Coordinator.pan(_:)))
         pan.maximumNumberOfTouches = 1; pan.delegate = context.coordinator
         let tap = UITapGestureRecognizer(target: context.coordinator,action: #selector(Coordinator.tap(_:)))
@@ -86,7 +87,7 @@ private struct ScoreRowGestures: UIViewRepresentable {
         view.addGestureRecognizer(pan); view.addGestureRecognizer(tap)
         return view
     }
-    func updateUIView(_ view: UIView,context: Context) { context.coordinator.parent = self }
+    func updateUIView(_ view: UIView,context: Context) { context.coordinator.parent = self; view.isUserInteractionEnabled = enabled }
     final class Coordinator: NSObject,UIGestureRecognizerDelegate {
         var parent: ScoreRowGestures
         init(_ parent: ScoreRowGestures) { self.parent = parent }

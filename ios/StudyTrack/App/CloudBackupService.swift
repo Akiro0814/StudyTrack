@@ -18,8 +18,8 @@ struct CloudBackupDestination: Sendable {
 
 actor CloudBackupService {
     private let testDirectory: URL?
-    private let bookmarkKey = "studytrack.backup-directory.v1"
-    init(testDirectory: URL? = nil) { self.testDirectory = testDirectory }
+    private let bookmarkKey: String
+    init(testDirectory: URL? = nil,bookmarkKey: String = "studytrack.backup-directory.v1") { self.testDirectory = testDirectory; self.bookmarkKey = bookmarkKey }
     func authorize(_ url: URL) throws {
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }

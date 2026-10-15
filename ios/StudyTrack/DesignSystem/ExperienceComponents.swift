@@ -38,7 +38,7 @@ struct StudyScroll<Content: View>: View {
                 .frame(maxWidth: .infinity)
         }.background { AppCanvas() }.scrollDismissesKeyboard(.interactively)
             .scrollEdgeEffectStyle(.soft,for: .top)
-            .environment(\.colorScheme,model.wallpaper.map { $0.prefersLightText ? .dark : .light } ?? scheme)
+            .environment(\.colorScheme,model.wallpaper == nil ? scheme : (model.wallpaperUsesLightText ? .dark : .light))
             .environment(\.studySurfaceScheme,scheme)
     }
     @Environment(AppModel.self) private var model

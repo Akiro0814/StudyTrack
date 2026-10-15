@@ -16,6 +16,11 @@ struct StudyDocumentPicker: UIViewControllerRepresentable {
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: mode.contentTypes,asCopy: mode.asCopy)
         picker.allowsMultipleSelection = false
         picker.shouldShowFileExtensions = true
+        #if DEBUG
+        if mode == .file,ProcessInfo.processInfo.arguments.contains("-uitesting-showcase") {
+            picker.directoryURL = FileManager.default.urls(for: .documentDirectory,in: .userDomainMask).first
+        }
+        #endif
         return picker
     }
     func makeCoordinator() -> Coordinator { Coordinator(self) }

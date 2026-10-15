@@ -41,6 +41,7 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         LSSupportsOpeningDocumentsInPlace: true
+        UIFileSharingEnabled: true
         CFBundleURLTypes:
           - CFBundleURLName: StudyTrack Analysis
             CFBundleURLSchemes: [studytrack]

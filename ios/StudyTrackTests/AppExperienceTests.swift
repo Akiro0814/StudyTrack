@@ -5,6 +5,22 @@ import UIKit
 import StudyTrackCore
 
 final class AppExperienceTests: XCTestCase {
+    func testBackupFolderAuthorizationPersistsAcrossServiceInstances() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let key = "test.backup-folder.\(UUID().uuidString)"
+        try FileManager.default.createDirectory(at: root,withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root); UserDefaults.standard.removeObject(forKey: key) }
+        let first = CloudBackupService(bookmarkKey: key)
+        try await first.authorize(root)
+        try await first.upload(Data("persisted backup".utf8))
+        let reopened = CloudBackupService(bookmarkKey: key)
+        let destination = try await reopened.destination()
+        XCTAssertEqual(destination?.url.resolvingSymlinksInPath(),root.resolvingSymlinksInPath())
+        let list = try await reopened.list()
+        XCTAssertEqual(list.count,1)
+        let bytes = try await reopened.download(list[0])
+        XCTAssertEqual(bytes,Data("persisted backup".utf8))
+    }
     func testOlderWidgetExportCannotReplaceNewerContent() async throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("widget-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: url) }

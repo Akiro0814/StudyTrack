@@ -31,7 +31,7 @@ struct SettingsView: View {
             }.buttonStyle(.plain).studySurface()
             VStack(alignment: .leading,spacing: 4) {
                 SectionHeading(title: "安心记录").padding(.bottom,10)
-                NavigationLink { DataTransferView() } label: { SettingsRow(title: "数据与备份",subtitle: "Excel 交换、完整备份与恢复",symbol: "externaldrive.fill",color: model.accent) }
+                NavigationLink { DataTransferView() } label: { SettingsRow(title: "数据与备份",subtitle: "Excel 交换、完整备份与恢复",symbol: "externaldrive.fill",color: model.accent) }.accessibilityIdentifier("settings.data")
                 Divider().padding(.leading,56)
                 NavigationLink { AboutView() } label: { SettingsRow(title: "关于学迹",subtitle: "隐私、支持与开源许可",symbol: "info.circle.fill",color: .secondary) }
                 Divider().padding(.leading,56)

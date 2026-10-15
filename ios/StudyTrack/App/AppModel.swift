@@ -62,6 +62,7 @@ final class AppModel {
     var selectionRevision = 0
     var dataRevision = 0
     var wallpaper: UIImage?
+    var wallpaperUsesLightText = false
     var avatar: UIImage?
     private var loadedAvatarID: String?
     private var loadedWallpaperID: String?
@@ -131,8 +132,10 @@ final class AppModel {
                 return UIImage(data: data)
             }
             let background = await image(p.wallpaperAssetID), profile = await image(avatarID)
-            guard selection == selectionRevision,preferences.wallpaperAssetID == p.wallpaperAssetID,preferences.currentUserID == p.currentUserID else { return }
+            guard selection == selectionRevision,preferences.wallpaperAssetID == p.wallpaperAssetID,preferences.currentUserID == p.currentUserID,
+                  p.currentUserID.flatMap({ preferences.avatarAssetID(for: $0) }) == avatarID else { return }
             wallpaper = background; avatar = profile
+            wallpaperUsesLightText = background?.prefersLightText ?? false
             loadedAvatarID = avatarID
             loadedWallpaperID = p.wallpaperAssetID
             loadedWallpaperRevision = selectionRevision

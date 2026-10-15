@@ -32,6 +32,12 @@ extension AppModel {
         p.wallpaperAssetID = wallpaperAsset.id; p.setAvatarAssetID(avatarAsset.id,for: scope.userID)
         p.theme = "simple"
         try await store.updatePreferences(p)
+        // Exercise the real system document picker with a selectable XLSX, not
+        // just a decoder unit test. Real app data remains in Application Support.
+        let documents = FileManager.default.urls(for: .documentDirectory,in: .userDomainMask)[0]
+        try FileManager.default.createDirectory(at: documents,withIntermediateDirectories: true)
+        let rows = try await store.exportRows(scope: scope)
+        try XLSXCodec.encode(rows).write(to: documents.appendingPathComponent("StudyTrack Import Test.xlsx"),options: .atomic)
     }
 }
 #endif
