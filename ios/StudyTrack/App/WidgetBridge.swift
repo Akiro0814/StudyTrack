@@ -14,8 +14,25 @@ extension AppModel {
                 let snapshot = try await store.snapshot()
                 try Task.checkCancellation()
                 if try await publisher.publish(snapshot,to: url,generation: generation) { WidgetCenter.shared.reloadAllTimelines() }
-            } catch { /* Widget refresh must not delay or fail local editing. */ }
+                widgetStatus = nil
+            } catch is CancellationError { }
+            catch { widgetStatus = "小组件刷新失败，请重新打开应用后重试。" }
         }
+    }
+    func publishWidgetsNow() async {
+        widgetUpdateTask?.cancel()
+        widgetGeneration += 1
+        guard let store else { return }
+        guard let url = WidgetArchive.fileURL else {
+            widgetStatus = "当前安装没有可用的共享容器。请使用同时保留 App Group 和小组件扩展签名的安装包。"
+            return
+        }
+        let generation = widgetGeneration
+        do {
+            let snapshot = try await store.snapshot()
+            if try await widgetPublisher.publish(snapshot,to: url,generation: generation) { WidgetCenter.shared.reloadAllTimelines() }
+            widgetStatus = nil
+        } catch { widgetStatus = "小组件刷新失败，请重新打开应用后重试。" }
     }
     func openWidget(_ url: URL) async {
         guard url.scheme == "studytrack",url.host == "analysis",let components = URLComponents(url: url,resolvingAgainstBaseURL: false) else { return }
@@ -23,7 +40,13 @@ extension AppModel {
         if values.isEmpty { analysisRoute = WidgetAnalysisRoute(subjectID: nil,wholeStage: false); return }
         guard let user = values["user"],let semester = values["semester"],preferences.multiUserEnabled || user == preferences.currentUserID,
               let store,let terms = try? await store.semesters(userID: user),terms.contains(where: { $0.id == semester }) else { notice = "小组件对应的档案已不可用。"; return }
-        await switchScope(StudyScope(userID: user,semesterID: semester))
+        let target = StudyScope(userID: user,semesterID: semester)
+        if let subject = values["subject"] {
+            let data = try? await store.analysis(scope: target,wholeStage: values["stage"] == "1")
+            guard data?.subjects.contains(where: { $0.id == subject }) == true else { notice = "小组件对应的科目已删除，请长按小组件重新选择。"; return }
+        }
+        if scope != target { await switchScope(target) }
+        guard scope == target else { return }
         analysisRoute = WidgetAnalysisRoute(subjectID: values["subject"],wholeStage: values["stage"] == "1")
     }
 }
@@ -37,7 +60,9 @@ actor WidgetPublisher {
         try Task.checkCancellation()
         let data = try JSONEncoder().encode(WidgetArchive.make(snapshot))
         try Task.checkCancellation()
-        try data.write(to: url,options: [.atomic,.completeFileProtectionUnlessOpen])
+        // WidgetKit must be able to open a new read while the device is locked,
+        // after its first unlock. Sensitive views still obey WidgetKit redaction.
+        try data.write(to: url,options: [.atomic,.completeFileProtectionUntilFirstUserAuthentication])
         writtenGeneration = generation; return true
     }
 }

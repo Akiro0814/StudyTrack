@@ -19,7 +19,7 @@ struct CloudBackupView: View {
     var body: some View {
         List {
             Section {
-                Button("立即备份到 iCloud",systemImage: "icloud.and.arrow.up") {
+                Button(location?.isCloud == false ? "立即保存完整备份" : "立即备份到 iCloud",systemImage: "icloud.and.arrow.up") {
                     if location == nil { backupAfterSelection = true; choosingFolder = true }
                     else { Task { await upload() } }
                 }.disabled(working)
@@ -30,6 +30,7 @@ struct CloudBackupView: View {
                     Text("备份位置：\(location.userSelected ? location.url.lastPathComponent : "学迹专属 iCloud 文件夹")").font(.caption)
                     if location.userSelected { Text("请在“文件”中确认此文件夹位于 iCloud Drive；选择本机文件夹仅会保存在本机。").font(.caption).foregroundStyle(.secondary) }
                 }
+                if location?.userSelected == true { Button("解除此文件夹授权") { Task { await service.forgetFolder(); backup = nil; await refresh() } }.disabled(working) }
                 Button("刷新云端备份",systemImage: "arrow.clockwise") { Task { await refresh() } }.disabled(working)
                 Button("从文件选择并恢复备份",systemImage: "doc.badge.arrow.up") { choosingBackup = true }.disabled(working)
                 if !status.isEmpty { Text(status).font(.caption).foregroundStyle(.secondary) }
@@ -42,8 +43,9 @@ struct CloudBackupView: View {
                         downloadTask = Task { await inspect(file) }
                     } label: {
                         VStack(alignment: .leading,spacing: 6) {
-                            Text(file.modified,format: .dateTime.year().month().day().hour().minute())
-                            Text(file.isCloud ? (file.uploaded ? "已上传 · 点击检查并恢复" : "等待 iCloud 完成传输") : "已保存 · 传输状态可在文件 App 查看").font(.caption).foregroundStyle(.secondary)
+                            Text(file.url.lastPathComponent).font(.subheadline).lineLimit(2)
+                            if file.modified != .distantPast { Text(file.modified,format: .dateTime.year().month().day().hour().minute()).font(.caption) }
+                            Text(file.errorMessage.map { "此备份暂不可用：" + $0 } ?? (file.isCloud ? (file.uploaded ? "已上传 · 点击检查并恢复" : "已保存 · 等待 iCloud 完成传输") : "已保存到所选文件夹")).font(.caption).foregroundStyle(.secondary)
                         }
                     }.disabled(working)
                 }
@@ -57,6 +59,7 @@ struct CloudBackupView: View {
                 }
             }
         }.studyCanvas().navigationTitle("iCloud 云备份")
+            .refreshable { if !working { await refresh() } }
             .task {
                 query.searchScopes = [NSMetadataQueryUbiquitousDocumentsScope,NSMetadataQueryAccessibleUbiquitousExternalDocumentsScope]
                 query.predicate = NSPredicate(format: "%K ENDSWITH %@",NSMetadataItemFSNameKey,".studytrackbackup")
@@ -94,6 +97,7 @@ struct CloudBackupView: View {
         } catch { files = []; status = "暂时无法读取备份列表，请检查文件 App 的同步状态后刷新。\n" + error.localizedDescription }
     }
     func upload() async {
+        guard !working else { return }
         working = true; defer { working = false }
         do {
             guard let store = model.store,let fileService = model.files else { return }
@@ -103,6 +107,7 @@ struct CloudBackupView: View {
         } catch { status = model.friendly(error) }
     }
     func inspectExternal(_ url: URL) async {
+        guard !working else { return }
         working = true; backup = nil; status = "正在读取并校验备份…"; defer { working = false; downloadTask = nil }
         do {
             guard let files = model.files else { return }
@@ -112,6 +117,7 @@ struct CloudBackupView: View {
         } catch { status = model.friendly(error) }
     }
     func inspect(_ file: CloudBackupFile) async {
+        guard !working else { return }
         working = true; backup = nil; status = "正在下载并校验备份…"; defer { working = false; downloadTask = nil }
         do {
             let bytes = try await service.download(file)

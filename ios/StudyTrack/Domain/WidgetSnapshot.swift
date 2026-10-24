@@ -39,7 +39,8 @@ public struct WidgetArchive: Codable, Sendable {
                     let subjects = snapshot.subjects.filter { $0.userID == user.id && ids.contains($0.semesterID) }
                     let groups = Dictionary(grouping: subjects) { "\($0.lineageID ?? $0.id)|\($0.fullScore)" }
                     for (key,values) in groups {
-                        let subjectIDs = Set(values.map(\.id)), representative = values.first { $0.semesterID == term.id } ?? values[0]
+                        let stableValues = values.sorted { $0.id < $1.id }
+                        let subjectIDs = Set(values.map(\.id)), representative = stableValues.first { $0.semesterID == term.id } ?? stableValues[0]
                         let rows = snapshot.exams.filter { $0.userID == user.id && subjectIDs.contains($0.subjectID) }.sorted { ($0.date.description,$0.createdAt,$0.id) < ($1.date.description,$1.createdAt,$1.id) }
                         let summary = AnalysisGroup.summarize(rows,full: representative.fullScore)
                         series.append(WidgetSeries(id: "\(user.id)|\(term.id)|\(wholeStage)|\(key)",userID: user.id,semesterID: term.id,subjectID: representative.id,wholeStage: wholeStage,title: representative.name,subtitle: user.name + " · " + (wholeStage ? (term.schoolTerm?.stage.label ?? term.name) : term.name),fullScore: representative.fullScore,scores: rows.suffix(120).map(\.score),dates: rows.suffix(120).map { $0.date.description },average: summary.average,maximum: summary.maximum,excellenceRate: summary.excellenceRate,count: rows.count))
@@ -47,8 +48,13 @@ public struct WidgetArchive: Codable, Sendable {
                 }
             }
         }
-        series.sort { $0.subtitle == $1.subtitle ? $0.title < $1.title : $0.subtitle < $1.subtitle }
-        let current = series.first { $0.userID == snapshot.preferences.currentUserID && $0.semesterID == snapshot.preferences.currentSemesterID && !$0.wholeStage }
+        series.sort { ($0.subtitle,$0.title,$0.fullScore,$0.id) < ($1.subtitle,$1.title,$1.fullScore,$1.id) }
+        let candidates = series.filter { $0.userID == snapshot.preferences.currentUserID && $0.semesterID == snapshot.preferences.currentSemesterID && !$0.wholeStage }
+        // Do not show an empty alphabetically-first subject when records exist.
+        let current = candidates.filter { !$0.scores.isEmpty }.sorted {
+            if $0.dates.last != $1.dates.last { return ($0.dates.last ?? "") > ($1.dates.last ?? "") }
+            return $0.id < $1.id
+        }.first ?? candidates.first
         return Self(updatedAt: Date(),defaultID: current?.id,series: series)
     }
     #if os(iOS) || os(macOS)

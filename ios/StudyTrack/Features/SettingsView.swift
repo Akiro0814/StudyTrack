@@ -33,6 +33,8 @@ struct SettingsView: View {
                 SectionHeading(title: "安心记录").padding(.bottom,10)
                 NavigationLink { DataTransferView() } label: { SettingsRow(title: "数据与备份",subtitle: "Excel 交换、完整备份与恢复",symbol: "externaldrive.fill",color: model.accent) }.accessibilityIdentifier("settings.data")
                 Divider().padding(.leading,56)
+                NavigationLink { WidgetHelpView() } label: { SettingsRow(title: "桌面与锁屏小组件",subtitle: "添加、选择科目与刷新状态",symbol: "rectangle.3.group",color: .teal) }
+                Divider().padding(.leading,56)
                 NavigationLink { AboutView() } label: { SettingsRow(title: "关于学迹",subtitle: "隐私、支持与开源许可",symbol: "info.circle.fill",color: .secondary) }
                 Divider().padding(.leading,56)
                 Button { guide = true } label: { SettingsRow(title: "使用引导",subtitle: "回顾记录、分析与备份",symbol: "sparkles",color: .orange) }

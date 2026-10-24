@@ -5,6 +5,8 @@ struct RootView: View {
     @State private var selectedTab = 0
     @State private var pendingWidgetURL: URL?
     @State private var showsProgress = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     var body: some View {
         @Bindable var model = model
         Group {
@@ -14,7 +16,7 @@ struct RootView: View {
                     if model.error == nil { ProgressView("正在打开学迹") }
                     else { Button("重新打开") { Task { await model.start() } } }
                 }
-            } else if model.users.isEmpty { OnboardingView() }
+            } else if model.users.isEmpty { OnboardingView().transition(.opacity) }
             else {
                 TabView(selection: $selectedTab) {
                     Tab("首页",systemImage: "house",value: 0) { AppNavigation { HomeView() } }
@@ -23,8 +25,11 @@ struct RootView: View {
                     Tab("设置",systemImage: "gearshape",value: 4) { AppNavigation { SettingsView() } }
                 }.id(model.selectionRevision)
                     .background { AppCanvas() }
+                    .transition(reduceMotion ? .opacity : .asymmetric(insertion: .scale(scale: 0.92).combined(with: .opacity),removal: .opacity))
             }
         }
+        .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.65,dampingFraction: 0.88),value: model.users.isEmpty)
+        .onChange(of: scenePhase) { _,_ in if model.ready { Task { await model.publishWidgetsNow() } } }
         .disabled(model.busy)
         .onOpenURL { url in
             if model.ready { Task { await model.openWidget(url) } }

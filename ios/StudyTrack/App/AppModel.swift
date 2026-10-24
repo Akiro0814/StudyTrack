@@ -18,6 +18,7 @@ final class AppModel {
     var homeAnalysis = AnalysisData()
     var recentlyDeleted: Exam?
     var analysisRoute: WidgetAnalysisRoute?
+    var widgetStatus: String?
     func deleteRecord(_ exam: Exam) async {
         guard let store, let current = scope, current.userID == exam.userID else { return }
         if await perform({

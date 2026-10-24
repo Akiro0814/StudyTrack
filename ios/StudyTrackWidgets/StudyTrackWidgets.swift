@@ -24,6 +24,7 @@ struct StudyEntry: TimelineEntry {
     let date: Date
     let updated: Date?
     let series: WidgetSeries?
+    var selectionMissing = false
 }
 struct StudyProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> StudyEntry { StudyEntry(date: .now,updated: nil,series: nil) }
@@ -32,7 +33,8 @@ struct StudyProvider: AppIntentTimelineProvider {
     func entry(_ configuration: StudyConfiguration) -> StudyEntry {
         let archive = WidgetArchive.load()
         let id = configuration.selection?.id ?? archive?.defaultID
-        return StudyEntry(date: .now,updated: archive?.updatedAt,series: archive?.series.first { $0.id == id })
+        let series = archive?.series.first { $0.id == id }
+        return StudyEntry(date: .now,updated: archive?.updatedAt,series: series,selectionMissing: configuration.selection != nil && series == nil)
     }
 }
 
@@ -64,7 +66,17 @@ struct StudyWidgetView: View {
                     }
                 }
             } else {
-                VStack(spacing: 6) { Image(systemName: "chart.xyaxis.line"); Text("打开学迹，选择科目并记录成绩").font(.caption).multilineTextAlignment(.center) }
+                if family == .accessoryInline {
+                    Text(entry.selectionMissing ? "学迹 · 请重新选择科目" : "学迹 · 暂无成绩")
+                } else if family == .accessoryCircular {
+                    Image(systemName: "chart.xyaxis.line").accessibilityLabel("打开学迹记录成绩")
+                } else {
+                    VStack(spacing: 6) {
+                        Image(systemName: "chart.xyaxis.line")
+                        if let series = entry.series { Text(series.title).font(.headline).privacySensitive() }
+                        Text(entry.selectionMissing ? "原成绩范围已不可用\n长按小组件重新选择" : "打开学迹，选择科目并记录成绩").font(.caption).multilineTextAlignment(.center)
+                    }
+                }
             }
         }.containerBackground(.background,for: .widget).widgetURL(entry.series?.deepLink ?? URL(string: "studytrack://analysis"))
     }

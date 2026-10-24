@@ -92,12 +92,14 @@ struct AvatarView: View {
 struct SectionHeading: View {
     let title: String
     var detail: String? = nil
+    @Environment(\.dynamicTypeSize) private var typeSize
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        headingLayout {
             Text(title).font(.title3.bold()); Spacer()
             if let detail { Text(detail).font(.caption).foregroundStyle(.secondary) }
         }.accessibilityAddTraits(.isHeader)
     }
+    var headingLayout: AnyLayout { typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading,spacing: 6)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline)) }
 }
 struct EmptyStudyView: View {
     let title: String

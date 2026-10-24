@@ -22,9 +22,10 @@ struct SummaryView: View {
 }
 struct ExamRowView: View {
     let exam: Exam; let subjects: [Subject]
+    @Environment(\.dynamicTypeSize) private var typeSize
     var body: some View {
         let subject = subjects.first { $0.id == exam.subjectID }
-        HStack(alignment: .center,spacing: 14) {
+        rowLayout {
             Image(systemName: "doc.text").font(.title3).foregroundStyle(.tint)
                 .frame(width: 42,height: 48).background(.tint.opacity(0.08),in: RoundedRectangle(cornerRadius: 13)).accessibilityHidden(true)
             VStack(alignment: .leading,spacing: 6) {
@@ -40,6 +41,7 @@ struct ExamRowView: View {
             }
         }.padding(.vertical,4).accessibilityElement(children: .combine)
     }
+    var rowLayout: AnyLayout { typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading,spacing: 12)) : AnyLayout(HStackLayout(alignment: .center,spacing: 14)) }
 }
 struct AddExamButton: View {
     let action: () -> Void
