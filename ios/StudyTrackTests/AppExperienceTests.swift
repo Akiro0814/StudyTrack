@@ -5,6 +5,30 @@ import UIKit
 import StudyTrackCore
 
 final class AppExperienceTests: XCTestCase {
+    func testCancelledLocalDownloadNeverReadsBackup() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root,withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = CloudBackupService(testDirectory: root)
+        try await service.upload(Data("fixture".utf8))
+        let files = try await service.list()
+        let task = Task { () throws -> Data in
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try await service.download(files[0])
+        }
+        do { _ = try await task.value; XCTFail("cancelled download read data") }
+        catch is CancellationError {}
+    }
+    func testOversizedCloudUploadLeavesNoPartialFile() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root,withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = CloudBackupService(testDirectory: root)
+        do { try await service.upload(Data(count: 100*1024*1024+1)); XCTFail("oversized upload accepted") }
+        catch is StudyError {}
+        let files = try await service.list()
+        XCTAssertTrue(files.isEmpty)
+    }
     func testBackupFolderAuthorizationPersistsAcrossServiceInstances() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let key = "test.backup-folder.\(UUID().uuidString)"
