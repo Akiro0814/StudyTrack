@@ -17,8 +17,8 @@ class PlatformUITests {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     @Before fun reset() { clearFixture(); waitTag("guide.skip") }
     private fun waitTag(tag: String) {
-        try { compose.waitUntil(15000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }; compose.waitForIdle() }
-        catch(error: Throwable) { image("failure-${tag.replace('.','-')}"); throw AssertionError("Waiting for $tag\n${compose.onRoot(useUnmergedTree=true).printToString()}",error) }
+        try { compose.waitUntil(15000) { runCatching { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false) }; compose.waitForIdle() }
+        catch(error: Throwable) { image("failure-${tag.replace('.','-')}"); val tree=runCatching { compose.onRoot(useUnmergedTree=true).printToString() }.getOrDefault("App has no active Compose hierarchy"); throw AssertionError("Waiting for $tag\n$tree",error) }
     }
     private fun image(name: String) {
         val context = ApplicationProvider.getApplicationContext<Context>()
