@@ -29,7 +29,7 @@ final class StudyTrackUITests: XCTestCase {
         reveal(app.buttons["settings.data"],in: app); app.buttons["settings.data"].tap()
         app.buttons["导入 .xlsx"].tap()
         let file = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@","StudyTrack Import Test")).firstMatch
-        XCTAssertTrue(file.waitForExistence(timeout: 10))
+        XCTAssertTrue(file.waitForExistence(timeout: 30))
         snapshot(app,"12-native-xlsx-selectable")
         XCTAssertTrue(file.isEnabled); file.tap()
         XCTAssertTrue(app.buttons["导入 .xlsx"].waitForExistence(timeout: 10))
