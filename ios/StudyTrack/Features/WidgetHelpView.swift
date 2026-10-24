@@ -19,6 +19,6 @@ struct WidgetHelpView: View {
                 Button("立即刷新小组件") { Task { await model.publishWidgetsNow() } }
                 Text("若在自签安装后找不到组件，请确认安装工具保留了 StudyTrackWidgets.appex，并为应用及扩展签入相同的 App Group。文件备份不依赖此权限。")
             }
-        }.studyCanvas().navigationTitle("小组件").task { await model.publishWidgetsNow() }
+        }.studyCanvas().navigationTitle("小组件").navigationBarTitleDisplayMode(.inline).task { await model.publishWidgetsNow() }
     }
 }

@@ -1,6 +1,27 @@
 import XCTest
 
 final class StudyTrackUITests: XCTestCase {
+    @MainActor func testCompleteGuideExplainsAllFeaturesAndOpensProfile() throws {
+        let app = XCUIApplication(); app.launchArguments = ["-uitesting"]; app.launch()
+        XCTAssertTrue(app.buttons["guide.next"].waitForExistence(timeout: 15))
+        for title in ["从你的学习档案开始","给每次努力一个归属","一科，或整场考试","让记录随时可找","看见每一步变化","让旧记录也加入旅程","让记录安心留存","把学迹变成你的样子"] {
+            XCTAssertTrue(app.staticTexts[title].waitForExistence(timeout: 5))
+            app.buttons["guide.next"].tap()
+        }
+        XCTAssertTrue(app.textFields["onboarding.name"].waitForExistence(timeout: 5))
+        snapshot(app,"14-complete-guide-profile")
+    }
+    @MainActor func testWidgetHelpExplainsConfigurationAndRefreshesWithoutAccount() throws {
+        let app = XCUIApplication(); app.launchArguments = ["-uitesting-showcase"]; app.launch()
+        XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 15))
+        app.tabBars.buttons["设置"].tap()
+        let help = app.buttons["settings.widgets"]
+        reveal(help,in: app); help.tap()
+        XCTAssertTrue(app.staticTexts["添加到桌面"].waitForExistence(timeout: 5))
+        let refresh = app.buttons["立即刷新小组件"]; reveal(refresh,in: app); refresh.tap()
+        XCTAssertTrue(app.navigationBars["小组件"].exists)
+        snapshot(app,"15-widget-help")
+    }
     @MainActor func testNativeDocumentPickerSelectsAndImportsXLSX() throws {
         let app = XCUIApplication(); app.launchArguments = ["-uitesting-showcase"]; app.launch()
         XCTAssertTrue(app.buttons["home.add"].waitForExistence(timeout: 15))
