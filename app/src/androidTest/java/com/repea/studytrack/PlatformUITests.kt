@@ -110,9 +110,39 @@ class PlatformUITests {
         compose.waitUntil(10000) { runBlocking { testAccess().repository().snapshot().preferences.displayMode=="dark" } }
         image("10-home-dark")
         compose.onNodeWithTag("home.add").performScrollTo().performClick(); waitTag("exam.score")
-        compose.onNodeWithTag("exam.score").performScrollTo().performTextInput("86.25"); image("11-editor-dark")
+        compose.onNodeWithTag("exam.score").performScrollTo().performTextInput("86.25")
+        compose.waitUntil(10000) { compose.onNodeWithTag("exam.score").isDisplayed() }; image("11-editor-dark")
         compose.onNodeWithText("保存").performClick()
         compose.waitUntil(10000) { runBlocking { testAccess().repository().snapshot().records.size==1 } }
         compose.onNodeWithTag("tab.2").performClick(); waitTag("analysis.chart"); compose.onNodeWithTag("analysis.chart").performScrollTo().assertIsDisplayed(); image("12-analysis-dark")
+    }
+    @Test fun nativeFilesPickerSelectsAnActualXLSXAndImportsItsPreview() {
+        onboard()
+        val instrumentation=InstrumentationRegistry.getInstrumentation(); val context=ApplicationProvider.getApplicationContext<Context>()
+        val filename="studytrack-picker-${System.currentTimeMillis()}.xlsx"
+        val values=android.content.ContentValues().apply { put(android.provider.MediaStore.Downloads.DISPLAY_NAME,filename); put(android.provider.MediaStore.Downloads.MIME_TYPE,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); put(android.provider.MediaStore.Downloads.RELATIVE_PATH,"Download") }
+        val uri=context.contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,values)!!
+        context.contentResolver.openOutputStream(uri)!!.use { output -> instrumentation.context.assets.open("android-poi.xlsx").use { it.copyTo(output) } }
+        val expected=com.repea.studytrack.utils.ExcelHelper(context).readPreview(uri).records.size
+        Assert.assertTrue(expected>0)
+        compose.onNodeWithTag("tab.3").performClick(); compose.onNodeWithText("数据与备份").performScrollTo().performClick()
+        compose.onNodeWithText("导入 .xlsx").performScrollTo().performClick()
+        var selected=false; val deadline=android.os.SystemClock.uptimeMillis()+30000
+        while(!selected && android.os.SystemClock.uptimeMillis()<deadline) {
+            val node=instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText(filename)?.firstOrNull()
+            if(node!=null) {
+                var target: android.view.accessibility.AccessibilityNodeInfo=node
+                while(!target.isClickable) { target=target.parent ?: break }
+                selected=target.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
+            }
+            if(!selected) android.os.SystemClock.sleep(300)
+        }
+        if(!selected) image("failure-native-picker")
+        Assert.assertTrue("Native Files picker did not expose the synthetic workbook",selected)
+        waitTag("data.import.confirm"); image("13-native-xlsx-preview")
+        compose.onNodeWithTag("data.import.confirm").performScrollTo().performClick()
+        compose.waitUntil(15000) { runBlocking { testAccess().repository().snapshot().allRecords.size==expected } }
+        image("14-native-xlsx-imported")
+        context.contentResolver.delete(uri,null,null)
     }
 }

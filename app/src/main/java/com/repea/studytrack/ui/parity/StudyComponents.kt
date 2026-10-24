@@ -4,6 +4,8 @@ package com.repea.studytrack.ui.parity
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -16,9 +18,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.semantics.*
@@ -70,9 +74,13 @@ fun Modifier.studyBusyBlock(busy: Boolean): Modifier = pointerInput(busy) {
 }
 @Composable fun StudyField(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier,
     keyboard: KeyboardType = KeyboardType.Text, multiline: Boolean = false, tag: String = "", placeholder: String = "", enabled: Boolean = true) {
+    val requester=remember { BringIntoViewRequester() }
+    var focused by remember { mutableStateOf(false) }
+    val keyboardHeight=WindowInsets.ime.getBottom(LocalDensity.current)
+    LaunchedEffect(focused,keyboardHeight) { if(focused) { kotlinx.coroutines.delay(100); requester.bringIntoView() } }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        BasicTextField(value, onChange, Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+        BasicTextField(value, onChange, Modifier.fillMaxWidth().bringIntoViewRequester(requester).onFocusChanged { focused=it.isFocused }.clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.055f)).padding(14.dp).heightIn(min = if (multiline) 80.dp else 24.dp).testTag(tag)
             .semantics { contentDescription = label },
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface), singleLine = !multiline, enabled = enabled,

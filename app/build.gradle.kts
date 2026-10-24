@@ -43,6 +43,7 @@ android {
     buildFeatures {
         compose = true
     }
+    sourceSets.getByName("androidTest").assets.srcDir("../ios/StudyTrackTests/Fixtures")
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

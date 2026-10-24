@@ -91,4 +91,31 @@ class PlatformIntegrationTests {
         assertEquals(restored.scope,repo.snapshot().scope)
         assertNull(repo.database.platformMetadataDao().get("pendingPreferences"))
     }
+    @Test fun excelExportAndImportRunOnAndroidWithRealWorkbookBytes() = runBlocking {
+        val repo=seed(); val context=ApplicationProvider.getApplicationContext<Context>(); val state=repo.snapshot()
+        val file=File(context.cacheDir,"device-excel-roundtrip.xlsx"); val helper=ExcelHelper(context)
+        assertTrue(helper.exportToUri(Uri.fromFile(file),state.subjects,state.records,state.semester!!.name))
+        val preview=helper.readPreview(Uri.fromFile(file))
+        assertTrue(preview.issues.isEmpty()); assertEquals(1,preview.records.size)
+        assertEquals(85.25,preview.records.single().score,0.0); assertEquals(12,preview.records.single().classRank)
+        assertEquals("2026-10-24",java.time.Instant.ofEpochMilli(preview.records.single().date).atZone(ZoneId.systemDefault()).toLocalDate().toString())
+    }
+    @Test fun independentIOSBackupRestoresAndExportsWithoutLosingPortableRows() = runBlocking {
+        val repo=seed(); val context=ApplicationProvider.getApplicationContext<Context>()
+        val bytes=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().context.assets.open("golden.studytrackbackup").use { it.readBytes() }
+        val original=BackupArchive.decode(bytes); val input=File(context.cacheDir,"ios-golden.studytrackbackup").apply { writeBytes(bytes) }
+        val backups=testAccess().backups(); backups.restore(backups.inspect(Uri.fromFile(input)))
+        assertEquals(2,repo.snapshot().users.size); assertEquals(4,repo.snapshot().semesters.size)
+        val output=File(context.cacheDir,"ios-golden-after.studytrackbackup"); testAccess().exporter().export(Uri.fromFile(output),ZoneId.systemDefault().id)
+        val restored=BackupArchive.decode(output.readBytes())
+        for(table in listOf("users","semesters","subjects","examRecords")) {
+            val expected=original.data.getJSONArray(table); val actual=restored.data.getJSONArray(table)
+            assertEquals(table,expected.length(),actual.length())
+            for(i in 0 until expected.length()) {
+                val row=expected.getJSONObject(i); val match=(0 until actual.length()).map { actual.getJSONObject(it) }.single { it.getString("id")==row.getString("id") }
+                assertEquals("$table createdAt",row.getString("createdAt"),match.getString("createdAt"))
+                if(table=="examRecords") { assertEquals(row.getString("date"),match.getString("date")); assertEquals(row.getString("score"),match.getString("score")) }
+            }
+        }
+    }
 }

@@ -193,7 +193,7 @@ import kotlinx.coroutines.launch
     StudyPage {
         StudyPanel {
             StudyHeading("Excel 交换",state.semester?.name)
-            StudyRow("导入 .xlsx","先检查预览，再保存成绩",Icons.Rounded.FileOpen,{ xlsx.launch(arrayOf("*/*")) })
+            StudyRow("导入 .xlsx","先检查预览，再保存成绩",Icons.Rounded.FileOpen,{ xlsx.launch(arrayOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/octet-stream","application/zip")) })
             StudyRow("导出当前学期","11 列标准格式，也可用作模板",Icons.Rounded.IosShare,{ exportXlsx.launch("学迹-${state.semester?.name ?: "成绩"}-${java.time.LocalDate.now()}.xlsx") })
             Text("学期 · 科目 · 考试名称 · 时间 · 分数 · 满分 · 分类 · 班排 · 年排 · 区排 · 反思\n日期使用 yyyy-MM-dd，分类为月考、期中、期末或其他。",style = MaterialTheme.typography.bodySmall,color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
