@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.semantics.*
@@ -37,6 +38,7 @@ import com.repea.studytrack.R
 
 val LocalStudySurfaceColors = staticCompositionLocalOf<ColorScheme?> { null }
 val LocalCanvasLightText = staticCompositionLocalOf<Boolean?> { null }
+private val LocalStudyViewportHeight = staticCompositionLocalOf { 0 }
 
 fun Modifier.studyBusyBlock(busy: Boolean): Modifier = pointerInput(busy) {
     if(busy) awaitPointerEventScope { while(true) { awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() } } }
@@ -57,9 +59,12 @@ fun Modifier.studyBusyBlock(busy: Boolean): Modifier = pointerInput(busy) {
     MaterialTheme(colorScheme=colors) { CompositionLocalProvider(LocalContentColor provides colors.onSurface) { content() } }
 }
 @Composable fun StudyPage(content: @Composable ColumnScope.() -> Unit) {
+    var viewportHeight by remember { mutableIntStateOf(0) }
     CanvasContent { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().verticalScroll(rememberScrollState()).imePadding()
+        CompositionLocalProvider(LocalStudyViewportHeight provides viewportHeight) {
+        Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().imePadding().onSizeChanged { viewportHeight=it.height }.verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp).padding(top = 12.dp, bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(28.dp), content = content)
+        }
     } }
 }
 @Composable fun StudyHeading(title: String, detail: String? = null) {
@@ -77,7 +82,8 @@ fun Modifier.studyBusyBlock(busy: Boolean): Modifier = pointerInput(busy) {
     val requester=remember { BringIntoViewRequester() }
     var focused by remember { mutableStateOf(false) }
     val keyboardHeight=WindowInsets.ime.getBottom(LocalDensity.current)
-    LaunchedEffect(focused,keyboardHeight) { if(focused) { kotlinx.coroutines.delay(100); requester.bringIntoView() } }
+    val viewportHeight=LocalStudyViewportHeight.current
+    LaunchedEffect(focused,keyboardHeight,viewportHeight,value) { if(focused) { kotlinx.coroutines.delay(150); requester.bringIntoView() } }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         BasicTextField(value, onChange, Modifier.fillMaxWidth().bringIntoViewRequester(requester).onFocusChanged { focused=it.isFocused }.clip(RoundedCornerShape(12.dp))
