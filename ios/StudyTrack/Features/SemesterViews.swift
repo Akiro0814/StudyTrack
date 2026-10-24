@@ -55,7 +55,6 @@ struct SemestersView: View {
 struct LearningStagesView: View {
     @Environment(AppModel.self) private var model
     @State private var starting: SchoolStage?
-    @State private var confirmStart = false
     @State private var classifying: Semester?
     @State private var editor = false
     @State private var term = SchoolTerm(stage: .high,year: 1,half: 1)
@@ -67,7 +66,7 @@ struct LearningStagesView: View {
                     let count = model.semesters.filter { $0.schoolTerm?.stage == stage }.count
                     Button {
                         if stage == model.currentStage { return }
-                        if count == 0 { starting = stage; confirmStart = true }
+                        if count == 0 { starting = stage }
                         else { Task { await model.switchStage(stage) } }
                     } label: {
                         HStack {
@@ -94,10 +93,10 @@ struct LearningStagesView: View {
                 }
             }
         }.studyCanvas().navigationTitle("学习阶段").navigationBarTitleDisplayMode(.inline)
-            .confirmationDialog("开启\(starting?.label ?? "学习阶段")？",isPresented: $confirmStart,titleVisibility: .visible) {
-                if let starting { Button("开启\(starting.label)") { Task { await model.switchStage(starting) } } }
+            .alert("开启学习阶段？",isPresented: Binding(get: { starting != nil },set: { if !$0 { starting = nil } }),presenting: starting) { stage in
+                Button("开启\(stage.label)") { Task { await model.switchStage(stage) } }
                 Button("取消",role: .cancel) {}
-            } message: { Text("创建第一学期；其他阶段的科目与成绩不受影响。") }
+            } message: { stage in Text("将创建\(stage.label)第一学期；其他阶段的科目与成绩不受影响。") }
             .sheet(isPresented: $editor) {
                 NavigationStack {
                     Form {
