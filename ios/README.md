@@ -74,7 +74,7 @@ java -Dfile.encoding=UTF-8 --class-path "$(cat /tmp/studytrack-poi-classpath)" i
 
 ## 自行签名的 IPA（当前交付路线）
 
-用户指定仓库为 `L1angK1NG/StudyTrack`，没有付费 Apple Developer 账号。`iOS Unsigned IPA` 在 push 或手动执行时编译 **iphoneos / arm64** Release，上传 `StudyTrack-unsigned.ipa` 和 SHA-256 到 Actions artifact，无需 Apple 签名 secrets。
+仓库现为 `Akiro0814/StudyTrack`，旧 `L1angK1NG/StudyTrack` 地址会重定向。本轮沿用无签名 IPA 自行重签的交付路线。`iOS Unsigned IPA` 在 push 或手动执行时编译 **iphoneos / arm64** Release，上传 `StudyTrack-unsigned.ipa` 和 SHA-256 到 Actions artifact，无需 Apple 签名 secrets。
 
 下载 artifact ZIP 并解压后，将里面的 IPA 导入你已有的自签工具，使用自己的证书重签并安装到 iOS 26+ iPhone。该文件尚未签名，不能直接安装；证书有效期、设备登记和重签结果由使用的签名方式决定。本次不会索取你的证书密码或私钥。
 
@@ -86,4 +86,4 @@ macOS 本地生成：`bash ios/Scripts/build-unsigned-ipa.sh`。脚本检查生�
 
 当前默认标识 `com.repea.studytrack.ios`；最终标识变更须同步 project.yml、UTType 的导出标识与 document type，以及开发者平台的 App ID/描述文件。上传命令返回成功只表示上传完成，App Store Connect 处理成功、TestFlight 可安装、真机验收分别记录。
 
-发布前必须补充：真机深浅色/玻璃/键盘/返回手势/最大字体/VoiceOver、最低系统、后台恢复、实际性能、隐私报告和 App Store 审核材料。图标从仓库现有 logo.png 制作，需维护者确认原素材授权。
+发布前必须补充：真机深浅色/玻璃/键盘/返回手势/最大字体/VoiceOver、最低系统、后台恢复、实际性能、隐私报告和 App Store 审核材料。图标已安装此前定稿的 B 版资源；对外发行前需核对素材及依赖授权。

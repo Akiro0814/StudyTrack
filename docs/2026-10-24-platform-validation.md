@@ -16,6 +16,8 @@
 | Android 界面与材质 | 重建首页、科目、分析、设置及其子页、表单、选择器、日历、开关、导航图标；统一 20 dp 页面边距、26 dp 卡片圆角、中文文案、字体级别和四标签结构。实际接入 Kyant Backdrop 的背景采样、模糊、折射、色差及色彩增强。 |
 | Android 个性化与小组件 | 系统/浅色/深色、自定义主题色、照片方向修正、壁纸文字对比、玻璃调节与复位；可配置档案/学期/阶段/科目的真实桌面 AppWidget、刷新、隐私和分析深链。Android 不实现 iCloud 或 iOS 锁屏 WidgetKit。 |
 
+实际运行截图：[iOS 首页](screenshots/platform-2026-10-24/ios-home.png)、[Android 玻璃首页](screenshots/platform-2026-10-24/android-home.png)、[Android 系统文件导入预览](screenshots/platform-2026-10-24/android-xlsx.png)、[小屏 1.8 倍字体、深色及键盘](screenshots/platform-2026-10-24/android-small-dark-keyboard.png)。
+
 ## 产品与实际操作复查
 
 本轮将发现的问题直接修复，而非仅列建议：
@@ -31,6 +33,8 @@
 - 海外旅行后时间戳转成本地日期可能前移一天；新记录保存固定日期，旧记录导出允许确认原始时区。
 - 手机照片可能依 EXIF 方向拍摄；导入图像先修正旋转和镜像，再限制尺寸，避免大图内存压力。
 - 下方内容和删除按钮曾被悬浮导航覆盖；内容区按实际导航高度保留空间。Android 不再锁定系统 fontScale。
+- 首页录入回调曾保留旧科目状态，使已添加科目的用户仍无法打开单条/批量表单；改为读取最新范围状态，并加入两条失败回归。
+- 键盘出现后可能覆盖正在填写的分数；调整滚动区与 IME 内边距的顺序，并在焦点、文本和可用高度改变后请求显示字段。验收检查完整字段可见，排除裁剪为零大小矩形的误判。
 - Excel 不能把坏日期、坏分数静默变成今天和零分；公式和无效数值拒绝，日期去时间/未知分类分别列出转换说明。
 - 旧壁纸 `bizhi.png` 实际为 JPEG，导致 Release 资源编译失败；更正为 `.jpg`，文件字节未变。
 - 原生 Files 提供商冷启动可能超过 10 秒；根据实际日志将 UI 测试等待调整到 30 秒，实际文件选择和导入仍完整执行。
@@ -39,7 +43,7 @@
 
 ### iOS
 
-- 最新应用逻辑的 [三尺寸 CI](https://github.com/Akiro0814/StudyTrack/actions/runs/40079905976) 全部成功：iPhone SE 3、iPhone 17、iPhone 17 Pro Max。每个任务先执行 34 项核心测试，再执行 42 项宿主测试及 10 项 UI 测试；42 项含核心用例，不能当成 86 个互不重复的用例。
+- 最新应用逻辑的 [三尺寸 CI](https://github.com/Akiro0814/StudyTrack/actions/runs/40082734488) 全部成功：iPhone SE 3、iPhone 17、iPhone 17 Pro Max；[前一轮归档](https://github.com/Akiro0814/StudyTrack/actions/runs/40079905976) 同样全通过。每个任务先执行 34 项核心测试，再执行 42 项宿主测试及 10 项 UI 测试；42 项含核心用例，不能当成 86 个互不重复的用例。
 - UI 覆盖完整八页引导、首次科目创建后继续录入、编辑/左滑删除、阶段/学期区分、系统 Files 选择真实 XLSX 并导入、壁纸、深色与无障碍字号、小组件帮助及刷新。
 - 云文件宿主用例覆盖授权跨实例保留、本地目录写入/列出/读取、取消及超限不留下半个文件。这些证明文件管线，不证明真实 iCloud 服务器传输。
 - 已获取 [iphoneos ARM64 Release 构建](https://github.com/Akiro0814/StudyTrack/actions/runs/40078359967)，版本 1.2.0 build 32。IPA 包内主程序与扩展均为真机 ARM64，包含 WidgetKit 扩展及 AppIntents 元数据、文档类型和 iCloud 声明，Release 不含 UI 测试入口。
@@ -49,10 +53,14 @@
 
 - JDK 21.0.12、Gradle 9.5、AGP 8.13.2；SDK Platform 37.0、targetSdk 36、minSdk 29。为 Backdrop 2.0 的依赖要求使用 API 37.0。AGP 对新 SDK 的支持范围提示仍存在，实际编译与 lint 已通过。
 - 16 项 JVM 测试成功：32 学期、阶段进度、数值校验、跨时区固定日期、万条采样、备份安全和独立 iOS 黄金夹具、Excel 公式/坏值/排名/1904 日期/转换提示、外观数值归一化。
-- Android 10 / API 29 隔离模拟器完整 13 项设备测试成功；包含数据库 4→6 真实升级、事务回滚、同名科目保护、用户隔离、完整备份与头像/外观/恢复快照、过期恢复拒绝、导入不切换范围、恢复日志中断恢复、真实 AppWidgetHost 更新以及 3 项 UI 流程。
-- Android 16 / API 36 已完成前一轮 13 项设备测试；新增批量/草稿及深色表单 UI 回归的最终 15 项结果待本轮日志归档后补记。
+- Android 10 / API 29 隔离模拟器最终 18 项设备测试成功：10 项仓库/交换集成、1 项数据库升级、1 项 AppWidgetHost、6 项 UI。包含数据库 4→6 真实升级、事务回滚、同名科目保护、用户隔离、完整备份与头像/外观/恢复快照、过期恢复拒绝、导入不切换范围、恢复日志中断恢复、Android 真实 XLSX 读写及独立 iOS 黄金备份恢复再导出，保留 UUID、时间和日期。
+- Android 16 / API 36 最终 18 项设备测试全部通过。另在 360×640 dp、系统字体 1.8 倍下验证完整引导、批量/草稿和深色编辑；严格检查完整输入框与保存动作可见，并用实际屏幕触摸保存成功。
 - `:app:testDebugUnitTest :app:connectedDebugAndroidTest :app:lintDebug :app:assembleRelease` 于 Android 10 任务整体成功。Lint 无 error；旧界面和依赖仍有警告，没有用忽略全部错误的方式通过。
 - 真实 AppWidgetHost 绑定小组件后可见 85.25，删除成绩并请求刷新后更新为空值；该用例通过，非仅单测生成 widget 数据。
+- 通过系统 Files 的真实文件选择、预览和导入；Android 10 的 DocumentsUI 无障碍 ACTION_CLICK 未能执行时，测试改为真实屏幕触摸，继续校验应用内导入结果。
+- 本机构建最终 Lint 结果为 0 errors / 70 warnings；Debug APK 的 v2 签名校验成功；Release 包排除了调试夹具入口和测试资源。
+- [Android 云端构建、Lint 和 16 项单测](https://github.com/Akiro0814/StudyTrack/actions/runs/40100459071) 成功，对应应用代码提交 `52b6a2d`。后续测试适配和交付文档不改变应用逻辑。
+- Release 真正安装运行：仅在隔离 Android 10 AVD 中，使用调试证书给 Release 副本签名，完成全新引导、档案、引导创建科目和录入 85.25 分，AndroidRuntime 无崩溃。此副本只用于 QA；交付的 Release 文件仍未签名，不冒充生产证书发行包。证据为 `release-smoke-result.json`、`release-smoke-home.png` 和脚本。
 
 ## 构建产物与证据
 
@@ -62,7 +70,9 @@
 - iOS SHA-256：`8e6525ad75787f1d1ef454f367b113c8575383870be4be645343557f26a88d3f`。
 - Android Debug：`app/build/outputs/apk/debug/app-debug.apk`，使用开发调试证书，可安装测试。
 - Android Release：`app/build/outputs/apk/release/app-release-unsigned.apk`，尚未配置发布证书。
-- 最终便捷文件、APK 哈希及额外小屏回归结果在收尾归档中补记。
+- 便捷文件位于 `artifacts/2026-10-24-platform/deliverables/`，含安装说明、`artifacts.json` 和 `SHA256SUMS.txt`。
+- Android Debug SHA-256：`f0403d03d59d6c3eacb7907bb0fe912bf04b8e47fbd94c7a0dd46ac3299e4c9d`，96,195,825 字节。
+- Android Release（未签名）SHA-256：`9917b7a7707f04e093c97debd2d1bdc6ca57ae61550520a3f8737d13c8d71f42`，73,953,716 字节。
 
 ## 明确未验证的部分
 

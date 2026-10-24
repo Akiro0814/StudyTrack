@@ -20,6 +20,17 @@ class PlatformUITests {
         try { compose.waitUntil(15000) { runCatching { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false) }; compose.waitForIdle() }
         catch(error: Throwable) { image("failure-${tag.replace('.','-')}"); val tree=runCatching { compose.onRoot(useUnmergedTree=true).printToString() }.getOrDefault("App has no active Compose hierarchy"); throw AssertionError("Waiting for $tag\n$tree",error) }
     }
+    private fun tap(bounds: androidx.compose.ui.geometry.Rect): Boolean {
+        val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
+        val started=android.os.SystemClock.uptimeMillis()
+        val down=android.view.MotionEvent.obtain(started,started,android.view.MotionEvent.ACTION_DOWN,bounds.center.x,bounds.center.y,0)
+        down.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+        val pressed=try { automation.injectInputEvent(down,true) } finally { down.recycle() }
+        android.os.SystemClock.sleep(80)
+        val up=android.view.MotionEvent.obtain(started,android.os.SystemClock.uptimeMillis(),android.view.MotionEvent.ACTION_UP,bounds.center.x,bounds.center.y,0)
+        up.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
+        return try { automation.injectInputEvent(up,true) && pressed } finally { up.recycle() }
+    }
     private fun image(name: String) {
         val context = ApplicationProvider.getApplicationContext<Context>()
         compose.waitForIdle()
@@ -121,12 +132,7 @@ class PlatformUITests {
         image("11-editor-dark")
         val save=compose.onNodeWithText("保存").fetchSemanticsNode()
         Assert.assertTrue("Save action is clipped: ${save.boundsInWindow}, original size ${save.size}",save.size.height>0 && save.boundsInWindow.height>=save.size.height-1 && save.boundsInWindow.top>=0)
-        val now=android.os.SystemClock.uptimeMillis(); val bounds=save.boundsInWindow
-        val down=android.view.MotionEvent.obtain(now,now,android.view.MotionEvent.ACTION_DOWN,bounds.center.x,bounds.center.y,0)
-        val up=android.view.MotionEvent.obtain(now,now+80,android.view.MotionEvent.ACTION_UP,bounds.center.x,bounds.center.y,0)
-        down.source=android.view.InputDevice.SOURCE_TOUCHSCREEN; up.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
-        try { val automation=InstrumentationRegistry.getInstrumentation().uiAutomation; Assert.assertTrue(automation.injectInputEvent(down,true)); Assert.assertTrue(automation.injectInputEvent(up,true)) }
-        finally { down.recycle(); up.recycle() }
+        Assert.assertTrue(tap(save.boundsInWindow))
         compose.waitUntil(10000) { runBlocking { testAccess().repository().snapshot().records.size==1 } }
         compose.onNodeWithTag("tab.2").performClick(); waitTag("analysis.chart"); compose.onNodeWithTag("analysis.chart").performScrollTo().assertIsDisplayed(); image("12-analysis-dark")
     }
@@ -145,14 +151,11 @@ class PlatformUITests {
         while(!selected && android.os.SystemClock.uptimeMillis()<deadline) {
             val node=instrumentation.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText(filename)?.firstOrNull()
             if(node!=null) {
+                var target: android.view.accessibility.AccessibilityNodeInfo=node
+                while(!target.isClickable) { target=target.parent ?: break }
+                selected=target.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
                 // Android 10's DocumentsUI row does not reliably expose ACTION_CLICK.
-                val bounds=android.graphics.Rect(); node.getBoundsInScreen(bounds)
-                val now=android.os.SystemClock.uptimeMillis()
-                val down=android.view.MotionEvent.obtain(now,now,android.view.MotionEvent.ACTION_DOWN,bounds.exactCenterX(),bounds.exactCenterY(),0)
-                val up=android.view.MotionEvent.obtain(now,now+80,android.view.MotionEvent.ACTION_UP,bounds.exactCenterX(),bounds.exactCenterY(),0)
-                down.source=android.view.InputDevice.SOURCE_TOUCHSCREEN; up.source=android.view.InputDevice.SOURCE_TOUCHSCREEN
-                try { selected=instrumentation.uiAutomation.injectInputEvent(down,true) && instrumentation.uiAutomation.injectInputEvent(up,true) }
-                finally { down.recycle(); up.recycle() }
+                if(!selected) { val bounds=android.graphics.Rect(); node.getBoundsInScreen(bounds); selected=tap(androidx.compose.ui.geometry.Rect(bounds.left.toFloat(),bounds.top.toFloat(),bounds.right.toFloat(),bounds.bottom.toFloat())) }
             }
             if(!selected) android.os.SystemClock.sleep(300)
         }
