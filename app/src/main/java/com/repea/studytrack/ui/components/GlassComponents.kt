@@ -59,7 +59,9 @@ data class LiquidGlassParams(
     val tintAlpha: Float = 0f,
     val borderAlpha: Float = 0.20f,
     val vibrancyEnabled: Boolean = true,
-    val chromaticAberration: Boolean = true
+    val chromaticAberration: Boolean = true,
+    val backingAlpha: Float = 0.15f,
+    val clear: Boolean = false
 )
 
 val LocalLayerBackdrop = compositionLocalOf<LayerBackdrop?> { null }
@@ -98,7 +100,7 @@ fun LiquidBackground(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.background)
             )
 
             if (themeStyle == AppThemeStyle.LIQUID_GLASS) {
@@ -112,7 +114,7 @@ fun LiquidBackground(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.White.copy(alpha = 0.24f))
+                            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.24f))
                     )
                 }
                 Box(
@@ -122,7 +124,7 @@ fun LiquidBackground(
                         .blur(42.dp)
                         .background(
                             brush = Brush.radialGradient(
-                                colors = listOf(BlobColor1.copy(alpha = 0.42f), Color.Transparent)
+                                colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.09f), Color.Transparent)
                             ),
                             shape = CircleShape
                         )
@@ -134,7 +136,7 @@ fun LiquidBackground(
                         .blur(56.dp)
                         .background(
                             brush = Brush.radialGradient(
-                                colors = listOf(BlobColor2.copy(alpha = 0.46f), Color.Transparent)
+                                colors = listOf(BlobColor2.copy(alpha = 0.06f), Color.Transparent)
                             ),
                             shape = CircleShape
                         )
@@ -146,7 +148,7 @@ fun LiquidBackground(
                         .blur(36.dp)
                         .background(
                             brush = Brush.radialGradient(
-                                colors = listOf(BlobColor3.copy(alpha = 0.26f), Color.Transparent)
+                                colors = listOf(BlobColor3.copy(alpha = 0.03f), Color.Transparent)
                             ),
                             shape = CircleShape
                         )
@@ -158,7 +160,7 @@ fun LiquidBackground(
                         .blur(28.dp)
                         .background(
                             brush = Brush.radialGradient(
-                                colors = listOf(BlobColor4.copy(alpha = 0.56f), Color.Transparent)
+                                colors = listOf(BlobColor4.copy(alpha = 0.03f), Color.Transparent)
                             ),
                             shape = CircleShape
                         )
@@ -182,6 +184,8 @@ fun GlassCard(
     val backdrop = LocalLayerBackdrop.current
     val params = LocalLiquidGlassParams.current
     val density = LocalDensity.current
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val accentColor = MaterialTheme.colorScheme.primary
 
     val glassModifier = if (themeStyle == AppThemeStyle.LIQUID_GLASS && backdrop != null) {
         val blurPx = with(density) { params.blurRadiusDp.dp.toPx() }
@@ -193,7 +197,7 @@ fun GlassCard(
                 shape = { shape as Shape },
                 effects = {
                     if (params.vibrancyEnabled) vibrancy()
-                    blur(blurPx)
+                    blur(if(params.clear) blurPx * 0.25f else blurPx)
                     lens(
                         refractionHeight = refractionHeightPx,
                         refractionAmount = refractionAmountPx,
@@ -203,19 +207,20 @@ fun GlassCard(
                 highlight = { Highlight(width = 1.dp, alpha = params.borderAlpha) },
                 shadow = { Shadow(radius = elevation) },
                 onDrawSurface = {
+                    drawRect(surfaceColor.copy(alpha = params.backingAlpha))
                     val outline = (shape as Shape).createOutline(size, layoutDirection, this)
                     when (outline) {
                         is Outline.Rounded -> {
                             drawRoundRect(
-                                color = Color.White.copy(alpha = params.tintAlpha),
+                                color = accentColor.copy(alpha = params.tintAlpha),
                                 cornerRadius = outline.roundRect.topLeftCornerRadius
                             )
                         }
                         is Outline.Rectangle -> {
-                            drawRect(Color.White.copy(alpha = params.tintAlpha))
+                            drawRect(accentColor.copy(alpha = params.tintAlpha))
                         }
                         is Outline.Generic -> {
-                            drawPath(outline.path, Color.White.copy(alpha = params.tintAlpha))
+                            drawPath(outline.path, accentColor.copy(alpha = params.tintAlpha))
                         }
                     }
                 }
@@ -230,10 +235,10 @@ fun GlassCard(
                     ambientColor = Color(0x180B1020)
                 )
                 .clip(shape)
-                .background(BackgroundLight)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.94f))
                 .border(
                     1.dp,
-                    Color(0xFFE9EEF7),
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f),
                     shape
                 )
         } else {

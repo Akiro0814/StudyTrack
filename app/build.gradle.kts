@@ -10,14 +10,14 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 android {
     namespace = "com.repea.studytrack"
-    compileSdk = 37
+    compileSdk { version = release(37) { minorApiLevel = 0 } }
 
     defaultConfig {
         applicationId = "com.repea.studytrack"
         minSdk = 29
         targetSdk = 36
-        versionCode = 50003
-        versionName = "V5.0.3"
+        versionCode = 60000
+        versionName = "V6.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -99,6 +99,9 @@ dependencies {
     implementation("org.apache.poi:poi-ooxml:5.2.3")
     // Testing
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
+    androidTestImplementation("androidx.test:core-ktx:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.12.00"))

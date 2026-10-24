@@ -15,5 +15,6 @@ data class Subject(
     val name: String,
     val fullScore: Double = 100.0,
     val userId: Int = 1,
-    val semesterId: Int = 1
+    val semesterId: Int = 1,
+    val lineageId: String? = null
 )

@@ -4,7 +4,7 @@
 
 ## 当前验证状态
 
-见 [`../docs/ios-implementation-progress.md`](../docs/ios-implementation-progress.md)。已有 Xcode 26.6 (17F113) 的真机 Release / arm64 IPA 与 iPhone 17 模拟器测试证据，工具链锁记录实际组合。完整机型矩阵、最低 iOS 26.0 与真机安装需分别验收，不将其中一项替代另一项。
+最新记录见 [`../docs/2026-10-24-platform-validation.md`](../docs/2026-10-24-platform-validation.md)。iOS 1.2.0 build 32 已生成 iphoneos / arm64 Release IPA；最新 CI 在 iPhone SE 3、iPhone 17、iPhone 17 Pro Max 三种模拟器上通过核心、宿主和 UI 测试。真实 iCloud 传输、重签设备上的 WidgetKit / App Group、最低 iOS 26.0 与真机安装仍需分别验证。
 
 ## macOS 开发
 
@@ -49,7 +49,7 @@ swift test -j 4 -Xswiftc -DGRDBCUSTOMSQLITE
 - 默认错误阻止导入，可明确选择仅导入有效行；重复及内容冲突跳过并报告。提交检查全库 revision，采用单事务，不修改当前选择。
 - 完整备份的 JSON 契约见 `shared-spec/backup-v1.schema.json`。替换恢复前校验所有资源、关系与唯一键，保存本机恢复快照，再安装内容寻址的不可变资源，事务替换数据和设置。
 - 原恢复快照位于 Application Support/StudyTrack/recovery；不在日常导出中重复嵌套。首版保守保留旧资源和恢复快照，不自动回收，避免删除仍用于恢复的内容。
-- Android 设置中的“导出完整 iOS 迁移备份”生成相同格式；需确认原时区。历史超精度、归一化重复或无法读取的资源会阻止生成。
+- Android“数据与备份 → 导出完整备份”生成相同格式；旧版时间戳需确认原时区，新版固定日期不受时区变化影响。历史超精度、归一化重复或无法读取的资源会阻止生成。
 - 备份未加密。不要用真实学生数据制作公开测试样本。
 
 ## 验证与夹具

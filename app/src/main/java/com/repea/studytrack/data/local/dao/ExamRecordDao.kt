@@ -40,7 +40,7 @@ interface ExamRecordDao {
     @Query("SELECT COUNT(*) FROM exam_records WHERE userId = :userId AND semesterId = :semesterId")
     suspend fun countRecordsInSemester(userId: Int, semesterId: Int): Int
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertRecord(record: ExamRecord)
 
     @Update

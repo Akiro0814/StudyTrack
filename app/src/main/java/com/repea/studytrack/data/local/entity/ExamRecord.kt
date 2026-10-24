@@ -33,5 +33,8 @@ data class ExamRecord(
     val reflection: String? = null,
     val imageUri: String? = null,
     val userId: Int = 1,
-    val semesterId: Int = 1
-)
+    val semesterId: Int = 1,
+    val dateOnly: String? = null
+) {
+    fun calendarDate(): String = dateOnly ?: com.repea.studytrack.domain.localDate(examDate)
+}

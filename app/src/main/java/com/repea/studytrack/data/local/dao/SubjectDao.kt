@@ -23,7 +23,7 @@ interface SubjectDao {
     @Query("SELECT COUNT(*) FROM subjects WHERE userId = :userId AND semesterId = :semesterId")
     suspend fun countSubjectsInSemester(userId: Int, semesterId: Int): Int
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertSubject(subject: Subject): Long
 
     @Update

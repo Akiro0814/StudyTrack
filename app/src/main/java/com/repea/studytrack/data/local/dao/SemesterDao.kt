@@ -20,7 +20,7 @@ interface SemesterDao {
     @Query("SELECT * FROM semesters WHERE name = :name AND userId = :userId LIMIT 1")
     suspend fun getSemesterByName(name: String, userId: Int): Semester?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertSemester(semester: Semester): Long
 
     @Update

@@ -302,7 +302,7 @@ fun AddExamScreen(
                     )
                     DatePickerField(
                         label = "考试日期",
-                        value = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault()).format(Date(examDate)),
+                        value = SimpleDateFormat("yyyy年MM月dd日", Locale.ROOT).format(Date(examDate)),
                         onClick = { showDatePicker = true }
                     )
                 }

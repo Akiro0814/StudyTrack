@@ -13,6 +13,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
@@ -33,18 +34,19 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    override fun attachBaseContext(newBase: Context) {
-        val config = newBase.resources.configuration
-        config.fontScale = 1f
-        super.attachBaseContext(newBase.createConfigurationContext(config))
-    }
+    private var widgetLink by androidx.compose.runtime.mutableStateOf<android.net.Uri?>(null)
+    private var linkSequence by androidx.compose.runtime.mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false) // Ensure edge-to-edge
+        widgetLink = intent?.data
         setContent {
-            AppRoot()
+            com.repea.studytrack.ui.parity.PlatformApp(widgetLink,linkSequence)
         }
+    }
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent); setIntent(intent); widgetLink = intent.data; linkSequence++
     }
 }
 

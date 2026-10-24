@@ -199,7 +199,7 @@ fun BatchAddExamScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(examDate)),
+                                    text = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(Date(examDate)),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )

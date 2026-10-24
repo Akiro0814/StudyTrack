@@ -298,7 +298,7 @@ fun HomeScreen(
                                 )
                                 Text(
                                     text = "${record.exam.examName} · ${
-                                        SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date(record.exam.examDate))
+                                        SimpleDateFormat("yyyy/MM/dd", Locale.ROOT).format(Date(record.exam.examDate))
                                     }",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,

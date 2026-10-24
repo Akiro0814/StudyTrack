@@ -45,6 +45,17 @@ class BackupExporterV1 @Inject constructor(
             }
             val dataset = stable("dataset")
             val now = Instant.now().toString()
+            val metadata = database.platformMetadataDao()
+            val previousRows = metadata.get("exchangeRows")?.let(::JSONObject) ?: JSONObject()
+            val nextRows = JSONObject()
+            fun stamped(row: JSONObject,type: String,local: Int): JSONObject {
+                val key = "$type:$local"; val previous = previousRows.optJSONObject(key)
+                val changed = row.keys().asSequence().filter { it != "createdAt" && it != "updatedAt" }.any { k -> canonicalJSON(row.opt(k)) != canonicalJSON(previous?.opt(k)) }
+                if(previous != null) row.put("createdAt",previous.getString("createdAt")).put("updatedAt",if(changed) now else previous.getString("updatedAt"))
+                nextRows.put(key,row); return row
+            }
+            val preservedAssets = metadata.get("preservedAssets")?.let(::JSONArray)?.objects() ?: emptyList()
+            val preservedAssetIDs = preservedAssets.associate { it.getJSONObject("asset").getString("sha256") to it.getJSONObject("asset").getString("id") }
             val migratedAt = identity.getString("migration_timestamp", null) ?: now.also {
                 editor.putString("migration_timestamp", it)
             }
@@ -74,8 +85,12 @@ class BackupExporterV1 @Inject constructor(
                 } ?: error("无法读取壁纸或附件，请重新选择资源后再备份")
                 val hash = sha(bytes)
                 return assetByHash.getOrPut(hash) {
-                    val uuid = UUID.nameUUIDFromBytes("studytrack-asset:$hash".toByteArray()).toString()
-                    val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
+                    val uuid = preservedAssetIDs[hash] ?: UUID.nameUUIDFromBytes("studytrack-asset:$hash".toByteArray()).toString()
+                    val mime = when {
+                        bytes.size > 3 && bytes[0] == 0xff.toByte() && bytes[1] == 0xd8.toByte() -> "image/jpeg"
+                        bytes.size > 8 && bytes.take(4) == listOf(0x89.toByte(),0x50.toByte(),0x4e.toByte(),0x47.toByte()) -> "image/png"
+                        else -> context.contentResolver.getType(uri) ?: "application/octet-stream"
+                    }
                     val extension = when (mime) { "image/jpeg" -> "jpg"; "image/png" -> "png"; else -> "bin" }
                     val path = "assets/$hash.$extension"
                     require(resources.values.sumOf { it.size.toLong() } + bytes.size <= 400L * 1024 * 1024) { "资源总量超过备份限制" }
@@ -90,6 +105,7 @@ class BackupExporterV1 @Inject constructor(
             val subjectScopes = mutableMapOf<Int, Pair<Int, Int>>()
             val subjectFullScores = mutableMapOf<Int, BigDecimal>()
             val knownUsers = mutableSetOf<Int>()
+            val profileAvatars = JSONObject()
             val uniqueSemesterNames = mutableSetOf<Pair<Int, String>>()
             val uniqueSubjects = mutableSetOf<Triple<Int, Int, String>>()
             val uniqueExams = mutableSetOf<List<String>>()
@@ -102,6 +118,8 @@ class BackupExporterV1 @Inject constructor(
                         require(name.isNotEmpty() && name.length <= 100) { "用户 $legacy 名称无效" }
                         val time = Instant.ofEpochMilli(c.long("createdAt")).toString()
                         users.put(JSONObject().put("id", id("user", "$legacy")).put("name", name).put("createdAt", time).put("updatedAt", time))
+                        stamped(users.getJSONObject(users.length()-1),"user",legacy)
+                        asset(c.optionalString("avatarUri"))?.let { profileAvatars.put(id("user", "$legacy"),it) }
                     }
                 }
                 require(knownUsers.isNotEmpty()) { "请先完成首次引导" }
@@ -113,6 +131,9 @@ class BackupExporterV1 @Inject constructor(
                         val time = Instant.ofEpochMilli(c.long("createdAt")).toString()
                         semesters.put(JSONObject().put("id", id("semester", "$legacy")).put("userID", id("user", "$user"))
                             .put("name", name).put("createdAt", time).put("updatedAt", time))
+                        val stage = c.optionalString("stage")
+                        if (stage != null) semesters.getJSONObject(semesters.length()-1).put("schoolTerm",JSONObject().put("stage",stage).put("year",c.int("schoolYear")).put("half",c.int("half")))
+                        stamped(semesters.getJSONObject(semesters.length()-1),"semester",legacy)
                     }
                 }
                 for (user in knownUsers) if (user !in semesterUsers.values) {
@@ -128,13 +149,15 @@ class BackupExporterV1 @Inject constructor(
                         subjects.put(JSONObject().put("id", id("subject", "$legacy")).put("userID", id("user", "$user"))
                             .put("semesterID", id("semester", "$term")).put("name", name).put("fullScore", full)
                             .put("createdAt", migratedAt).put("updatedAt", migratedAt))
+                        c.optionalString("lineageId")?.let { subjects.getJSONObject(subjects.length()-1).put("lineageID",it) }
+                        stamped(subjects.getJSONObject(subjects.length()-1),"subject",legacy)
                     }
                 }
                 db.query("SELECT * FROM exam_records ORDER BY id").use { c ->
                     while (c.moveToNext()) {
                         val legacy = c.int("id"); val user = c.int("userId"); val term = c.int("semesterId"); val subject = c.int("subjectId")
                         val name = BackupValues.normalized(c.string("examName")); val score = BackupValues.score(c.double("score"))
-                        val date = BackupValues.date(c.long("examDate"), sourceZone)
+                        val date = c.optionalString("dateOnly") ?: BackupValues.date(c.long("examDate"), sourceZone)
                         require(subjectScopes[subject] == (user to term) && BigDecimal(score) <= subjectFullScores.getValue(subject)) { "成绩 $legacy 归属或分数无效" }
                         require(name.length <= 100 && uniqueExams.add(listOf("$user", "$term", "$subject", name, date, score))) { "成绩 $legacy 在按日转换后重复，请先处理重复记录" }
                         val type = when (c.string("examType")) {
@@ -154,11 +177,17 @@ class BackupExporterV1 @Inject constructor(
                             val rank = if (c.isNull(index)) null else c.getInt(index)
                             require(rank == null || rank > 0) { "成绩 $legacy 排名无效" }; exam.put(key, rank ?: JSONObject.NULL)
                         }
-                        exams.put(exam)
+                        exams.put(stamped(exam,"exam",legacy))
                     }
                 }
             }
             val wallpaper = asset(prefs.customWallpaperUri)
+            preservedAssets.forEach { asset(it.getString("uri")) }
+            metadata.get("preservedLegacyIDMap")?.let { raw ->
+                val keys = mappings.objects().map { "${it.getString("sourceDatasetID")}|${it.getString("entityType")}|${it.getString("legacyID")}" }.toMutableSet()
+                val known = canonical.values.toSet()
+                for(item in JSONArray(raw).objects()) if(item.getString("canonicalID") in known && keys.add("${item.getString("sourceDatasetID")}|${item.getString("entityType")}|${item.getString("legacyID")}")) mappings.put(item)
+            }
             val currentUser = if (prefs.currentUserId in knownUsers) prefs.currentUserId else knownUsers.first()
             val currentTerm = if (semesterUsers[prefs.currentSemesterId] == currentUser) id("semester", "${prefs.currentSemesterId}")
                 else semesterUsers.entries.firstOrNull { it.value == currentUser }?.let { id("semester", "${it.key}") } ?: id("semester", "user-$currentUser-default")
@@ -167,10 +196,16 @@ class BackupExporterV1 @Inject constructor(
                 .put("glassRefractionAmountDp", prefs.glassRefractionAmountDp).put("glassTintAlpha", prefs.glassTintAlpha)
                 .put("glassBorderAlpha", prefs.glassBorderAlpha).put("glassVibrancyEnabled", prefs.glassVibrancyEnabled)
                 .put("glassChromaticAberration", prefs.glassChromaticAberration)
+            val preserved = database.platformMetadataDao().get("preservedExtensions")?.let(::JSONObject) ?: JSONObject()
+            val ios = preserved.optJSONObject("ios") ?: JSONObject()
+            ios.put("displayMode",prefs.displayMode).put("glassVariant",prefs.glassVariant).put("glassTint",prefs.glassTintAlpha.toString()).put("glassBacking",prefs.glassBacking.toString()).put("profileAvatars",profileAvatars)
+            val previousAndroid = preserved.optJSONObject("android") ?: JSONObject()
+            for(key in android.keys()) previousAndroid.put(key,android.get(key))
+            preserved.put("ios",ios).put("android",previousAndroid)
             val settings = JSONObject().put("theme", if (prefs.themeStyle == AppThemeStyle.LIQUID_GLASS) "glass" else "simple")
-                .put("accent", "blue").put("wallpaperAssetID", wallpaper ?: JSONObject.NULL).put("multiUserEnabled", prefs.multiUserEnabled)
+                .put("accent", prefs.accentHex).put("wallpaperAssetID", wallpaper ?: JSONObject.NULL).put("multiUserEnabled", prefs.multiUserEnabled)
                 .put("currentUserID", id("user", "$currentUser")).put("currentSemesterID", currentTerm)
-                .put("nameNormalizationVersion", 1).put("platformExtensions", JSONObject().put("android", android))
+                .put("nameNormalizationVersion", 1).put("platformExtensions", preserved)
             val data = JSONObject().put("users", users).put("semesters", semesters).put("subjects", subjects)
                 .put("examRecords", exams).put("assets", assets).put("legacyIDMap", mappings)
             // Persist identity before publishing so repeated exports reuse every canonical ID.
@@ -193,6 +228,7 @@ class BackupExporterV1 @Inject constructor(
                 require(temporary.length() <= 100L * 1024 * 1024) { "压缩备份超过 100MB" }
                 val output = context.contentResolver.openOutputStream(destination, "wt") ?: error("无法写入目标文件")
                 output.use { target -> temporary.inputStream().use { it.copyTo(target) } }
+                metadata.put(com.repea.studytrack.data.local.entity.PlatformMetadata("exchangeRows",nextRows.toString()))
             } finally { temporary.delete() }
         }
     }
@@ -203,4 +239,12 @@ class BackupExporterV1 @Inject constructor(
     private fun Cursor.double(name: String) = getDouble(getColumnIndexOrThrow(name))
     private fun Cursor.string(name: String) = getString(getColumnIndexOrThrow(name))
     private fun Cursor.optionalString(name: String): String? = getColumnIndexOrThrow(name).let { if (isNull(it)) null else getString(it) }
+}
+
+private fun canonicalJSON(value: Any?): String = when(value) {
+    null,JSONObject.NULL -> "null"
+    is JSONObject -> value.keys().asSequence().toList().sorted().joinToString(prefix="{",postfix="}") { JSONObject.quote(it)+":"+canonicalJSON(value.opt(it)) }
+    is JSONArray -> (0 until value.length()).joinToString(prefix="[",postfix="]") { canonicalJSON(value.opt(it)) }
+    is String -> JSONObject.quote(value)
+    else -> value.toString()
 }

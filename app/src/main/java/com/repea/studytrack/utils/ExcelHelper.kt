@@ -21,6 +21,12 @@ import javax.inject.Inject
 class ExcelHelper @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) {
+    fun readPreview(uri: Uri): ExcelPreview {
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readLimited(20*1024*1024) } ?: error("无法读取文件")
+        require(bytes.size <= 20*1024*1024) { "Excel 文件超过 20MB" }
+        require(bytes.size > 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4b.toByte()) { "请选择 .xlsx 工作簿，不支持旧 .xls 格式" }
+        return bytes.inputStream().use { input -> XSSFWorkbook(input).use { ExcelWorkbookCodec.preview(it) } }.copy(sourceDigest=BackupArchive.sha(bytes))
+    }
     fun exportToUri(
         uri: Uri,
         subjects: List<Subject>,
@@ -42,7 +48,7 @@ class ExcelHelper @Inject constructor(
             row.createCell(0).setCellValue(semesterName)
             row.createCell(1).setCellValue(record.subject.name)
             row.createCell(2).setCellValue(record.exam.examName)
-            row.createCell(3).setCellValue(dateFormat.format(Date(record.exam.examDate)))
+            row.createCell(3).setCellValue(record.exam.calendarDate())
             row.createCell(4).setCellValue(record.exam.score)
             row.createCell(5).setCellValue(record.subject.fullScore)
             row.createCell(6).setCellValue(record.exam.examType)

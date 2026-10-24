@@ -2,9 +2,9 @@
 
 iOS 原生版本与自签 IPA 构建：参见 [iOS 使用与构建说明](ios/README.md)。iOS 工程位于 `ios/`，要求 iOS 26+；GitHub Actions 的 `iOS Unsigned IPA` 生成真机 arm64 包供自行签名安装。开发与验证记录见 [实施记录](docs/ios-implementation-progress.md)。
 
-iOS 1.1 原生体验更新：壁纸修复、用户头像、平滑成绩曲线、首次录入引导与界面重构，见 [交付记录与实际截图](docs/ios-experience-delivery.md)。
+iOS 1.2 / Android V6.0 两端更新：云文件与小组件可靠性修复、最终 B 版品牌、八页完整功能引导、学习阶段与科目继承、跨学期分析、完整备份恢复、统一四标签界面。实际测试、构建和验证边界见 [本轮交付记录](docs/2026-10-24-platform-validation.md)。历史 iOS 1.1 记录见 [体验更新](docs/ios-experience-delivery.md)。
 
-学迹是一款面向学生场景的 Android 成绩记录与分析应用，主打本地离线、多学期管理、可视化分析和高完成度的 Compose 界面体验。
+学迹是一款面向学生场景的 iOS / Android 成绩记录与分析应用，主打本地离线、多学期管理和可视化分析。iOS 使用 SwiftUI，Android 使用 Compose，并按 iOS 的页面结构、文案、间距、圆角与交互重建主要界面。
 
 当前版本已经支持：
 - 首次启动引导
@@ -16,6 +16,11 @@ iOS 1.1 原生体验更新：壁纸修复、用户头像、平滑成绩曲线、
 - Excel 导入导出
 - 纯白主题与液态玻璃主题
 - 液态玻璃自定义壁纸
+- 小学、初中、高中、大学阶段和 32 个结构化学期
+- 同阶段科目继承、同满分多科比较、整个阶段趋势
+- 用户头像、深浅色、主题色、完整功能引导与删除撤销
+- 包含资源和外观的跨平台完整备份、恢复预览和本机恢复快照
+- Android 桌面小组件，iOS 桌面及锁屏小组件
 
 ## 项目定位
 - 适合学生、家长或需要长期追踪考试成绩的人群
@@ -25,7 +30,7 @@ iOS 1.1 原生体验更新：壁纸修复、用户头像、平滑成绩曲线、
 ## 核心功能
 ### 1. 首次启动引导
 - 首次打开应用会进入欢迎引导页
-- 可直接输入用户名与当前学期名
+- 设置称呼、头像、学习阶段与当前学期
 - 学期名会直接接入应用内的多学期管理，不需要后续再重复创建
 
 ### 2. 首页总览
@@ -70,9 +75,9 @@ iOS 1.1 原生体验更新：壁纸修复、用户头像、平滑成绩曲线、
 - 适合家庭共用设备或同一设备上记录多名学生成绩
 
 ### 8. 多学期管理
-- 支持创建、重命名、切换、删除学期
+- 支持开启下一学期、切换、删除和旧学期归类
 - 导入导出和成绩查看都围绕当前学期进行
-- 适合按“高一下学期”“2026 春季学期”等方式持续管理数据
+- 同阶段新学期继承科目，保留历史成绩；旧自定义学期可手动归类
 
 ### 9. Excel 导入导出
 - 支持将当前学期数据导出为 `.xlsx`
@@ -104,7 +109,8 @@ iOS 1.1 原生体验更新：壁纸修复、用户头像、平滑成绩曲线、
   - 边框强度调节
   - 增强色彩层次开关
   - 色差折射开关
-- 当切换到纯白主题时，自定义壁纸会暂时停用；切回液态玻璃主题后恢复
+- 壁纸与卡片材质分别设置，纯色卡片和玻璃卡片都可搭配壁纸
+- 支持系统、浅色、深色外观，以及自定义主题色和玻璃背景支撑
 
 ## 界面特点
 - 基于 Jetpack Compose 构建
@@ -121,22 +127,22 @@ iOS 1.1 原生体验更新：壁纸修复、用户头像、平滑成绩曲线、
 - 本地数据库：Room
 - 本地偏好存储：DataStore
 - 导航：Navigation Compose
-- 图表：MPAndroidChart
+- 图表：Compose Canvas 自绘曲线（旧页面依赖暂保留）
 - 图片加载：Coil
 - Excel 处理：Apache POI
 - 液态玻璃效果：`io.github.kyant0:backdrop`
 
 ## 环境要求
 - Android Studio 最新稳定版
-- JDK 17+ 可编译项目
+- 已验证 JDK 21 / Gradle 9.5；Android SDK Platform 37.0
 - `minSdk = 29`
 - `targetSdk = 36`
-- `compileSdk = 36`
+- `compileSdk = release(37) { minorApiLevel = 0 }`
 
 ## 快速开始
 ### 1. 克隆项目
 ```bash
-git clone https://github.com/wznb666-0814/StudyTrack.git
+git clone https://github.com/Akiro0814/StudyTrack.git
 cd StudyTrack
 ```
 
@@ -197,14 +203,15 @@ app/src/main/java/com/repea/studytrack/
 ├─ ui/
 │  ├─ components/     Compose 通用组件
 │  ├─ navigation/     页面导航
-│  ├─ screens/        各业务页面
+│  ├─ parity/         当前两端统一界面与导航
+│  ├─ screens/        旧界面代码，当前入口不路由到此处
 │  └─ theme/          主题、颜色与样式
 ├─ utils/             Excel、评分等工具
 └─ viewmodel/         页面状态与业务逻辑
 ```
 
 ## 当前版本说明
-- 版本号：`V5.0.0`
+- Android：`V6.0.0`（60000）；iOS：`1.2.0`
 - 当前方向：围绕“成绩管理 + 多学期 + 高质量本地 UI”持续迭代
 
 ## 隐私说明

@@ -14,17 +14,48 @@ import com.repea.studytrack.data.local.entity.Subject
 import com.repea.studytrack.data.local.entity.UserProfile
 
 @Database(
-    entities = [Subject::class, ExamRecord::class, UserProfile::class, Semester::class],
-    version = 4,
+    entities = [Subject::class, ExamRecord::class, UserProfile::class, Semester::class, com.repea.studytrack.data.local.entity.PlatformMetadata::class],
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
+    abstract fun platformMetadataDao(): com.repea.studytrack.data.local.dao.PlatformMetadataDao
     abstract fun subjectDao(): SubjectDao
     abstract fun examRecordDao(): ExamRecordDao
     abstract fun userDao(): UserDao
     abstract fun semesterDao(): SemesterDao
 
     companion object {
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Preserve legacy timestamps; every new/edited record also stores
+                // its calendar date, so travelling cannot move an exam to yesterday.
+                db.execSQL("ALTER TABLE exam_records ADD COLUMN dateOnly TEXT")
+            }
+        }
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE users ADD COLUMN avatarUri TEXT")
+                db.execSQL("ALTER TABLE semesters ADD COLUMN stage TEXT")
+                db.execSQL("ALTER TABLE semesters ADD COLUMN schoolYear INTEGER")
+                db.execSQL("ALTER TABLE semesters ADD COLUMN half INTEGER")
+                db.execSQL("ALTER TABLE subjects ADD COLUMN lineageId TEXT")
+                db.execSQL("CREATE TABLE IF NOT EXISTS platform_metadata (`key` TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL)")
+                for (stage in com.repea.studytrack.domain.SchoolStage.entries) {
+                    for (term in com.repea.studytrack.domain.SchoolTerm.catalog(stage)) {
+                        db.execSQL("UPDATE semesters SET stage=?, schoolYear=?, half=? WHERE name=?", arrayOf<Any>(stage.wire, term.year, term.half, term.label))
+                    }
+                }
+                db.query("SELECT s.id,s.userId,s.semesterId,s.name,t.stage FROM subjects s JOIN semesters t ON t.id=s.semesterId AND t.userId=s.userId").use { rows ->
+                    while(rows.moveToNext()) {
+                        val stage = if(rows.isNull(4)) "legacy-${rows.getInt(2)}" else rows.getString(4)
+                        val key = "${rows.getInt(1)}|$stage|${com.repea.studytrack.utils.BackupValues.normalized(rows.getString(3))}"
+                        val lineage = java.util.UUID.nameUUIDFromBytes(key.toByteArray(Charsets.UTF_8)).toString()
+                        db.execSQL("UPDATE subjects SET lineageId=? WHERE id=?", arrayOf<Any>(lineage,rows.getInt(0)))
+                    }
+                }
+            }
+        }
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // 创建用户表并插入一个默认用户（ID 固定为 1）
