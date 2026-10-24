@@ -8,8 +8,10 @@ on:
         options: [all, unit, unit-xlsx]
         default: all
   pull_request:
+    branches: [iOS]
     paths: ['ios/**', 'shared-spec/**', '.github/workflows/ios-*.yml']
   push:
+    branches: [iOS]
     paths: ['ios/**', 'shared-spec/**', '.github/workflows/ios-*.yml']
 permissions:
   contents: read

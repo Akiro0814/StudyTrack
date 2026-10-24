@@ -1,4 +1,6 @@
-# 学迹 StudyTrack
+# 学迹 StudyTrack · Android
+
+当前是默认的 **Android** 分支，应用代码位于 `app/`。iOS 开发与交付请切换到 [iOS 分支](https://github.com/Akiro0814/StudyTrack/tree/iOS)。两个分支的用途、共享目录和同步方式见 [分支说明](docs/branches.md)。
 
 iOS 原生版本与自签 IPA 构建：参见 [iOS 使用与构建说明](ios/README.md)。iOS 工程位于 `ios/`，要求 iOS 26+；GitHub Actions 的 `iOS Unsigned IPA` 生成真机 arm64 包供自行签名安装。开发与验证记录见 [实施记录](docs/ios-implementation-progress.md)。
 

@@ -2,6 +2,10 @@ name: Android Verification
 on:
   workflow_dispatch:
   push:
+    branches: [Android]
+    paths: ['app/**', 'ios/StudyTrackTests/Fixtures/**', 'build.gradle.kts', 'gradle/**', 'gradle.properties', 'gradlew*', 'settings.gradle.kts', '.github/workflows/android-migration.yml']
+  pull_request:
+    branches: [Android]
     paths: ['app/**', 'ios/StudyTrackTests/Fixtures/**', 'build.gradle.kts', 'gradle/**', 'gradle.properties', 'gradlew*', 'settings.gradle.kts', '.github/workflows/android-migration.yml']
 permissions:
   contents: read

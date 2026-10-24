@@ -12,6 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   release:
+    if: github.ref == 'refs/heads/iOS'
     runs-on: macos-26
     environment: ios-release
     timeout-minutes: 60
