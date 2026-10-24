@@ -1,226 +1,35 @@
-# 学迹 StudyTrack · Android
+# 学迹 StudyTrack · iOS
 
-当前是默认的 **Android** 分支，应用代码位于 `app/`。iOS 开发与交付请切换到 [iOS 分支](https://github.com/Akiro0814/StudyTrack/tree/iOS)。两个分支的用途、共享目录和同步方式见 [分支说明](docs/branches.md)。
+原生 SwiftUI 成绩记录与分析应用，支持 iOS 26.0+ / iPhone。当前分支 **iOS** 用于 iOS 开发与交付；Android 应用请前往 [Android 默认分支](https://github.com/Akiro0814/StudyTrack/tree/Android)。
 
-iOS 原生版本与自签 IPA 构建：参见 [iOS 使用与构建说明](ios/README.md)。iOS 工程位于 `ios/`，要求 iOS 26+；GitHub Actions 的 `iOS Unsigned IPA` 生成真机 arm64 包供自行签名安装。开发与验证记录见 [实施记录](docs/ios-implementation-progress.md)。
+## 功能
 
-iOS 1.2 / Android V6.0 两端更新：云文件与小组件可靠性修复、最终 B 版品牌、八页完整功能引导、学习阶段与科目继承、跨学期分析、完整备份恢复、统一四标签界面。实际测试、构建和验证边界见 [本轮交付记录](docs/2026-10-24-platform-validation.md)。历史 iOS 1.1 记录见 [体验更新](docs/ios-experience-delivery.md)。
+- 无需注册的本机档案、头像和多用户隔离。
+- 小学、初中、高中、大学阶段，结构化学期及同阶段科目继承。
+- 单条与批量成绩、考试日期和类型、可选三种排名与反思、草稿、编辑、搜索、删除及撤销。
+- 分数与排名趋势、同满分多科比较、整个学习阶段汇总。
+- 标准 Excel 导入导出、错误与转换预览、完整备份恢复及恢复前快照。
+- iCloud 文件夹授权与备份状态、桌面及锁屏小组件、分析深链和配置诊断。
+- 深浅色、主题色、壁纸、Liquid Glass、完整八页引导与转场。
 
-学迹是一款面向学生场景的 iOS / Android 成绩记录与分析应用，主打本地离线、多学期管理和可视化分析。iOS 使用 SwiftUI，Android 使用 Compose，并按 iOS 的页面结构、文案、间距、圆角与交互重建主要界面。
+## 构建与安装
 
-当前版本已经支持：
-- 首次启动引导
-- 多用户与多学期管理
-- 单条与批量成绩录入
-- 科目管理
-- 首页成绩概览
-- 成绩趋势与统计分析
-- Excel 导入导出
-- 纯白主题与液态玻璃主题
-- 液态玻璃自定义壁纸
-- 小学、初中、高中、大学阶段和 32 个结构化学期
-- 同阶段科目继承、同满分多科比较、整个阶段趋势
-- 用户头像、深浅色、主题色、完整功能引导与删除撤销
-- 包含资源和外观的跨平台完整备份、恢复预览和本机恢复快照
-- Android 桌面小组件，iOS 桌面及锁屏小组件
+工程在 `ios/`，配置源为 `ios/project.yml`。本地开发需要 macOS 和 Xcode；生成工程、运行核心/模拟器测试及签名说明见 [iOS 开发文档](ios/README.md)。
 
-## 项目定位
-- 适合学生、家长或需要长期追踪考试成绩的人群
-- 强调离线可用，数据默认仅保存在本地设备
-- 以“快速记录 + 持续分析 + 视觉体验”作为核心设计方向
+在 GitHub Actions 中选择 **iOS** 分支：
 
-## 核心功能
-### 1. 首次启动引导
-- 首次打开应用会进入欢迎引导页
-- 设置称呼、头像、学习阶段与当前学期
-- 学期名会直接接入应用内的多学期管理，不需要后续再重复创建
+- **iOS CI**：核心测试及三种 iPhone 尺寸的宿主 / UI 回归。
+- **iOS Unsigned IPA**：生成真机 ARM64 Release IPA，包含小组件扩展。
+- **iOS Environment Probe**：查看工具链与可用模拟器环境。
+- **iOS TestFlight**：仅从本分支手动运行，须具备有效发行配置。
 
-### 2. 首页总览
-- 显示当前用户、当前学期
-- 显示最近成绩、最高分、优秀率、科目数等关键指标
-- 提供“添加成绩”“批量录入”等快捷入口
-- 小屏设备下已做导航与顶部布局适配
+当前已交付 iOS 1.2.0 build 32。无签名 IPA 需重签后安装；iCloud 容器、App Group 和小组件实际能力取决于有效的签名授权。真实 iCloud 跨设备传输和重签设备上的 WidgetKit 尚未完成真机验证。
 
-### 3. 科目管理
-- 支持创建、编辑、删除科目
-- 每个科目可配置满分
-- 科目会作为后续成绩录入和统计分析的基础数据
+## 验证、目录与历史
 
-### 4. 成绩记录
-- 支持单条新增成绩
-- 支持编辑已有成绩
-- 支持批量录入同一次考试下多个科目的成绩
-- 可记录以下信息：
-  - 考试名称
-  - 考试日期
-  - 分数
-  - 考试类型
-  - 班排
-  - 年排
-  - 区排
-  - 备注 / 反思
+- [本轮修复、自测证据和验证边界](docs/2026-10-24-platform-validation.md)
+- [分支用途与共享目录约定](docs/branches.md)
+- [备份交换格式](shared-spec/backup-v1.schema.json)
+- [历史 iOS 实施记录](docs/ios-implementation-progress.md)
 
-### 5. 成绩列表
-- 按时间查看全部成绩记录
-- 支持筛选和快速定位
-- 支持跳转编辑和删除
-
-### 6. 分析能力
-- 按科目查看成绩趋势
-- 查看平均分、最高分、波动情况等分析结果
-- 支持结合分数和排名做长期观察
-
-### 7. 多用户模式
-- 支持在同一台设备中管理多个用户
-- 每个用户拥有独立的数据空间
-- 可在设置页中添加、重命名、切换、删除用户
-- 适合家庭共用设备或同一设备上记录多名学生成绩
-
-### 8. 多学期管理
-- 支持开启下一学期、切换、删除和旧学期归类
-- 导入导出和成绩查看都围绕当前学期进行
-- 同阶段新学期继承科目，保留历史成绩；旧自定义学期可手动归类
-
-### 9. Excel 导入导出
-- 支持将当前学期数据导出为 `.xlsx`
-- 支持从 Excel 导入成绩数据
-- 导入时支持识别以下字段：
-  - 学期
-  - 科目
-  - 考试名称
-  - 时间
-  - 分数
-  - 满分
-  - 分类
-  - 班排
-  - 年排
-  - 区排
-  - 反思
-- 导入失败时会给出格式说明与示例指引
-- 导出内容默认按“每行一条成绩记录”组织
-
-### 10. 个性化与主题
-- 支持 `纯白主题`
-- 支持 `液态玻璃主题`
-- 液态玻璃主题下支持：
-  - 自定义壁纸
-  - 模糊强度调节
-  - 折射高度调节
-  - 折射幅度调节
-  - 玻璃染色调节
-  - 边框强度调节
-  - 增强色彩层次开关
-  - 色差折射开关
-- 壁纸与卡片材质分别设置，纯色卡片和玻璃卡片都可搭配壁纸
-- 支持系统、浅色、深色外观，以及自定义主题色和玻璃背景支撑
-
-## 界面特点
-- 基于 Jetpack Compose 构建
-- 使用自定义底部导航与卡片系统
-- 纯白主题采用白卡 + 阴影层次
-- 液态玻璃主题基于 `AndroidLiquidGlass / backdrop` 方案实现背景采样与玻璃折射效果
-- 全局点击区域已统一为圆角裁切的按压反馈
-
-## 技术栈
-- 语言：Kotlin
-- UI：Jetpack Compose + Material 3
-- 架构：MVVM
-- 依赖注入：Hilt
-- 本地数据库：Room
-- 本地偏好存储：DataStore
-- 导航：Navigation Compose
-- 图表：Compose Canvas 自绘曲线（旧页面依赖暂保留）
-- 图片加载：Coil
-- Excel 处理：Apache POI
-- 液态玻璃效果：`io.github.kyant0:backdrop`
-
-## 环境要求
-- Android Studio 最新稳定版
-- 已验证 JDK 21 / Gradle 9.5；Android SDK Platform 37.0
-- `minSdk = 29`
-- `targetSdk = 36`
-- `compileSdk = release(37) { minorApiLevel = 0 }`
-
-## 快速开始
-### 1. 克隆项目
-```bash
-git clone https://github.com/Akiro0814/StudyTrack.git
-cd StudyTrack
-```
-
-### 2. 使用 Android Studio 打开
-- 直接打开项目根目录
-- 等待 Gradle 同步完成
-
-### 3. 运行调试版本
-```bash
-./gradlew :app:assembleDebug
-```
-
-Windows:
-
-```bash
-.\gradlew.bat :app:assembleDebug
-```
-
-### 4. 运行 Kotlin 编译检查
-```bash
-./gradlew :app:compileDebugKotlin
-```
-
-Windows:
-
-```bash
-.\gradlew.bat :app:compileDebugKotlin
-```
-
-### 5. 输出 APK
-```bash
-./gradlew :app:assembleRelease
-```
-
-输出目录：
-- Debug APK：`app/build/outputs/apk/debug/`
-- Release APK：`app/build/outputs/apk/release/`
-
-## 导入格式说明
-推荐表头顺序如下：
-
-```text
-学期 | 科目 | 考试名称 | 时间 | 分数 | 满分 | 分类 | 班排 | 年排 | 区排 | 反思
-```
-
-说明：
-- `学期` 列可选，未提供时默认导入到当前学期
-- `时间` 建议使用 `yyyy-MM-dd`
-- `科目`、`时间`、`分数` 为核心字段
-- 可先从应用导出一份 Excel，再按同样格式编辑后重新导入
-
-## 项目结构
-```text
-app/src/main/java/com/repea/studytrack/
-├─ data/              本地数据库、实体、DAO
-├─ di/                Hilt 注入模块
-├─ repository/        仓库层与偏好配置
-├─ ui/
-│  ├─ components/     Compose 通用组件
-│  ├─ navigation/     页面导航
-│  ├─ parity/         当前两端统一界面与导航
-│  ├─ screens/        旧界面代码，当前入口不路由到此处
-│  └─ theme/          主题、颜色与样式
-├─ utils/             Excel、评分等工具
-└─ viewmodel/         页面状态与业务逻辑
-```
-
-## 当前版本说明
-- Android：`V6.0.0`（60000）；iOS：`1.2.0`
-- 当前方向：围绕“成绩管理 + 多学期 + 高质量本地 UI”持续迭代
-
-## 隐私说明
-- 当前版本不依赖服务器
-- 用户数据默认仅保存在本地设备
-- 导入导出通过系统文件选择器完成
-
-## 开源说明
-- 本项目用于学习、展示和个人项目迭代
-- 若你要二次修改或发布，请自行确认第三方依赖许可证和素材使用范围
+两个长期分支都保留已有完整源码与 Git 历史。`shared-spec/` 和独立黄金夹具供两端互通验证，Android 代码也保留，便于共享修复与回归；平台开发和自动构建分别通过对应分支进入。
